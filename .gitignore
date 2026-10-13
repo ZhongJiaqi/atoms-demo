@@ -1,0 +1,13 @@
+.next/
+node_modules/
+generated-projects/
+sandbox-template/dist/
+supabase/.temp/
+.env
+.env.local
+.env.*.local
+*.log
+playwright-report/
+test-results/
+.DS_Store
+*.tsbuildinfo

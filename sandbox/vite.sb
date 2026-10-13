@@ -1,0 +1,16 @@
+(version 1)
+(deny default)
+
+(allow process*)
+(allow sysctl-read)
+(allow mach-lookup)
+(allow signal (target self))
+
+(allow file-read*)
+(deny file-read* (literal "/Users/jiaqizhong/ai-news-radar/.env.local"))
+
+(allow file-write*
+  (subpath "/private/tmp/atoms-demo-vite-cache")
+  (subpath "/private/var/folders"))
+
+(allow network*)

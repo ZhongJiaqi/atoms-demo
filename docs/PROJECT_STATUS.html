@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="zh-CN">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Atoms Demo 未完成任务 · 2026-10-14</title>
+<style>
+body{margin:0;background:#f5f6fa;color:#242735;font:15px/1.7 system-ui,sans-serif}main{max-width:1060px;margin:auto;padding:32px 20px}h1{font-size:28px}h2{font-size:20px;margin-top:28px}.card{background:white;padding:22px;border:1px solid #e3e5ef;border-radius:14px;margin:16px 0}.muted,small{color:#656b7c}.tag{display:inline-block;background:#eef0ff;padding:2px 9px;border-radius:6px;font-size:12px}table{width:100%;border-collapse:collapse}th,td{text-align:left;vertical-align:top;border-bottom:1px solid #e9ebf2;padding:12px 8px}th{background:#f8f9fc}code{font-size:12px;background:#f2f3f8;padding:2px 4px}summary{cursor:pointer;font-weight:600}button{border:0;border-radius:8px;padding:10px 16px;background:#5366da;color:white;cursor:pointer}textarea{width:100%;min-height:140px;box-sizing:border-box}a{color:#4358ca}@media(max-width:650px){main{padding:15px}table{font-size:13px}td,th{padding:8px 4px}}
+</style>
+<main>
+<h1>本地生成闭环已跑通，线上闭环尚未完成</h1>
+<p class="muted">检查时间：2026-10-14。目标：少量真实用户在线注册、自然语言生成应用、预览、继续修改并恢复项目。本轮只检查与记录，未修改业务代码、生产配置或数据库。</p>
+<section class="card">
+<h2>已确认的进展</h2>
+<p><strong>最新更新：</strong>历史版本回滚与首页输入框下方“我的项目”已实现。恢复旧代码会保存为新版本，原历史不删除；真实数据库、沙盒预览、刷新、真实模型后续修改、第二账号拒绝及重复恢复目录回收已通过。最终 26 项单测、7 项浏览器回归、构建和类型检查通过。版本卡目前使用版本标识，不是应用截图。</p>
+<ul>
+<li><strong>用户实测：</strong>收到确认邮件、注册登录成功、真实模型生成应用构建成功。</li>
+<li><strong>本轮远端只读证据：</strong>Atoms 独立 Supabase 中有 1 个已确认用户、2 个项目（1 个成功项目，1 个无成功版本草稿）、2 条消息、2 个代码文件、1 个版本快照、1 个成功任务、0 个失败任务。仅查询数量，未读取用户邮箱、对话正文或源码。</li>
+<li><strong>代码已接入：</strong>成功版本事务保存、历史项目查询、项目 URL 恢复、同项目增量修改、最多两轮构建修复、SSE、Preview / Code 切换。</li>
+<li><strong>测试证据：</strong>本轮 20/20 单元测试通过；发现 9 个 Playwright 用例。前轮通过 4 个局部浏览器用例（导航 2、认证配置 1、固定源码沙盒交互 1）。另 5 个真实模型/认证完整用例尚未通过本轮验收。固定源码沙盒测试不等于真实模型端到端验收。</li>
+</ul>
+</section>
+<section class="card">
+<h2>上线前必须完成</h2>
+<table><thead><tr><th>任务</th><th>当前证据 / 用户影响</th><th>完成标准</th></tr></thead><tbody>
+<tr><td>线上沙盒与预览部署</td><td><code>lib/sandbox/local-sandbox.ts</code> 依赖 macOS、本地目录、内存和长期 Vite 进程；当前预览最多存活 15 分钟。尚无远程 Sandbox 或静态部署适配器。</td><td>远程受控构建；按成功版本保存产物与预览引用；宿主重启后仍能访问或从云端源码恢复。</td></tr>
+<tr><td>线上独立预览 Origin 与存储</td><td><code>lib/preview-url.ts</code> 仅本地自动生成项目子域名；线上默认同源，iframe 无同源权限时浏览器存储不可用。部署 URL 若每轮变化，也无法自然保留上一版本 localStorage。</td><td>应用与宿主安全隔离；同一项目拥有稳定存储身份；三例业务数据跨预览刷新、宿主刷新和修改保留。</td></tr>
+<tr><td>失败任务持久化</td><td>Agent catch 仅保存本地 JSON；失败消息、日志、修复次数刷新后会丢失，无版本草稿无法恢复。</td><td>任务开始/失败写入数据库；保留失败历史但不推进成功版本；草稿可重试或明确展示状态。</td></tr>
+<tr><td>恢复一致性与构建隔离</td><td><code>loadPersistedProject</code> 分四个请求读取；修改在当前预览目录重建，保存前可能暴露未提交代码。</td><td>单次一致快照读取；以不可变版本为修改基线；独立目录构建，保存成功后切换产物。</td></tr>
+<tr><td>预览访问权限</td><td><code>/api/preview</code> 未验证登录或项目所有权；知道项目 ID 就可尝试读取预览。项目元数据的 RLS 不会自动保护预览。</td><td>私有预览验证授权；公开分享单独授权；独立 Origin 下不得把宿主凭据泄露给生成代码。</td></tr>
+<tr><td>并发、超时与 SSE 断流</td><td>全局内存锁会串行所有用户，不能锁住多个实例；300 秒请求包含模型、修复和构建。前端 EOF 未检查是否收到终态。</td><td>项目级数据库任务租约；失败/中断可查询；断流明确显示错误或恢复进度，避免一直显示“正在保存”。</td></tr>
+<tr><td>数据库写入边界</td><td>authenticated 可直接修改自身业务表，绕过原子保存 RPC 的版本校验；消息 sequence 冲突采用 do nothing，需要验证不静默丢失新消息。</td><td>关键状态写入通过校验身份与版本的 RPC；异常冲突明确失败，不能显示保存成功。</td></tr>
+<tr><td>公开额度控制与依赖修复</td><td>没有用户级生成额度/频率控制。上次审计剩余 PostCSS/sharp 风险（2 high、1 moderate），尚未解决。</td><td>最小服务端用量限制；处理依赖风险并重新验证，不直接强制大版本升级。</td></tr>
+<tr><td>真实完整端到端验收</td><td>两个 E2E 测试账号未配置；当前“恢复”测试只刷新页面，没有销毁原沙盒；深色/优先级主要检查版本，缺少功能断言。</td><td>Todo → 深色 → 优先级，同项目连续修改；注销重登；删除旧运行环境后恢复；第二账号读、改、恢复、预览均被拒绝；三代表例功能与持久化通过。</td></tr>
+<tr><td>部署与运维交付</td><td>已初始化独立 main Git 仓库；Vercel Token/Team/Preview Project 配置为空；尚无上线地址和生产回调验证。</td><td>阶段提交以 git log 为准；宿主/预览项目关联；部署配置、生产邮箱回调、日志与用量检查；大陆实际网络访问验证。</td></tr>
+</tbody></table>
+</section>
+<section class="card">
+<h2>与参考 Atoms 的功能差距：可分期完成</h2>
+<table><thead><tr><th>功能</th><th>现状</th><th>建议</th></tr></thead><tbody>
+<tr><td>版本列表与回滚</td><td>已实现独立版本面板和真实恢复按钮；恢复为新快照并同步预览与后续修改基线。</td><td>本轮已验收；预览缩略图与克隆暂未实现。</td></tr>
+<tr><td>正式分享 / 发布</td><td>分享仅复制私有项目链接；发布仅新开临时预览，不会创建持久部署。</td><td>用户于 2026-10-14 明确要求暂缓分享和发布功能。线上内部预览部署仍需实现。</td></tr>
+<tr><td>真正停止任务</td><td>停止按钮仅提示等待；取消 SSE 也不终止模型和构建。</td><td>补最小取消与终态保存，防止浪费额度。</td></tr>
+<tr><td>控制台、跟随、折叠</td><td>控制台展示宿主状态而非应用运行日志；跟随按钮无行为，桌面折叠仅提示。</td><td>第二优先级，不阻塞首次在线生成。</td></tr>
+<tr><td>克隆、附件、可视化设计工具</td><td>克隆/附件尚无真实实现；元素选择、文本修改和主题工具未实现。</td><td>延后，当前 MVP 用自然语言修改即可。</td></tr>
+</tbody></table>
+</section>
+<section class="card">
+<h2>建议的执行顺序</h2>
+<ol id="plan">
+<li><label><input type="checkbox"> 修复失败任务保存、预览授权、SSE 终态和数据库一致性。</label></li>
+<li><label><input type="checkbox"> 补两个测试账号，验收同项目多轮修改、真实冷启动恢复和账号隔离。</label></li>
+<li><label><input type="checkbox"> 接入线上沙盒、不可变产物发布与稳定的项目存储身份。</label></li>
+<li><label><input type="checkbox"> 打通真实发布、最小额度控制、依赖修复与生产回调。</label></li>
+<li><label><input type="checkbox"> 上线后跑三代表例和大陆访问验证，再补版本回滚与体验功能。</label></li>
+</ol>
+<p>人工配置优先：把两个测试账号仅写入 Atoms <code>.env.local</code> 的 <code>E2E_PRIMARY_*</code> 和 <code>E2E_OTHER_*</code>；后续完成 Vercel/GitHub 授权及生产域名配置。不要将密码发到聊天中。你已成功收信，SMTP 不再视为当前体验的已证实阻塞；仍需确认生产邮件配置及另一真实邮箱能否注册收信。</p>
+<p class="muted">旧 FEATURE_GAP_ANALYSIS.md 是 Phase 2 前的快照，部分“缺失”已实现；本报告为当前检查结果。当前没有重新运行完整模型验收，也没有修改账号或删除项目。</p>
+<button onclick="exportPlan()">导出选定进度为 Markdown</button>
+<textarea id="export" hidden readonly aria-label="导出的进度"></textarea>
+</section>
+<script>
+function exportPlan(){const rows=[...document.querySelectorAll('#plan label')].map(x=>'- ['+(x.querySelector('input').checked?'x':' ')+'] '+x.textContent.trim());const box=document.getElementById('export');box.hidden=false;box.value='# Atoms Demo 待办（2026-10-14）\n\n'+rows.join('\n');box.select();}
+</script>
+</main>
+</html>

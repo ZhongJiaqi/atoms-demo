@@ -1,0 +1,316 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Atoms Demo 上线准备清单</title>
+  <style>
+    :root { color-scheme: light; --bg:#f5f6f8; --card:#fff; --ink:#18191c; --muted:#686b73; --line:#e2e4e9; --blue:#315efb; --green:#13795b; --amber:#9a6700; --red:#c62828; }
+    * { box-sizing: border-box; }
+    body { margin:0; background:var(--bg); color:var(--ink); font:15px/1.65 -apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif; }
+    main { width:min(1120px,calc(100% - 32px)); margin:32px auto 80px; }
+    h1 { margin:0 0 8px; font-size:34px; letter-spacing:-.04em; }
+    h2 { margin:0 0 16px; font-size:22px; }
+    h3 { margin:22px 0 8px; font-size:17px; }
+    p { margin:8px 0; }
+    a { color:var(--blue); }
+    code { padding:2px 6px; border-radius:6px; background:#f0f1f4; font:13px ui-monospace,SFMono-Regular,Menlo,monospace; overflow-wrap:anywhere; }
+    pre { overflow:auto; margin:10px 0; padding:14px; border:1px solid var(--line); border-radius:12px; background:#111318; color:#f4f4f5; font:13px/1.55 ui-monospace,SFMono-Regular,Menlo,monospace; }
+    .lede { max-width:800px; color:var(--muted); font-size:17px; }
+    .meta,.grid { display:grid; gap:14px; }
+    .meta { grid-template-columns:repeat(4,1fr); margin:24px 0; }
+    .grid { grid-template-columns:repeat(2,minmax(0,1fr)); }
+    .card { padding:22px; border:1px solid var(--line); border-radius:18px; background:var(--card); box-shadow:0 7px 28px rgba(20,25,35,.04); }
+    .metric strong { display:block; font-size:23px; }
+    .metric span,.muted { color:var(--muted); }
+    .banner { margin:18px 0; padding:16px 18px; border-radius:14px; border:1px solid #f1d694; background:#fff9e9; }
+    .ok { color:var(--green); } .warn { color:var(--amber); } .stop { color:var(--red); }
+    .pill { display:inline-block; margin-right:6px; padding:2px 9px; border-radius:999px; font-size:12px; font-weight:650; background:#eef1ff; color:#304fc8; }
+    table { width:100%; border-collapse:collapse; }
+    th,td { padding:11px 10px; border-bottom:1px solid var(--line); text-align:left; vertical-align:top; }
+    th { color:var(--muted); font-size:12px; letter-spacing:.04em; text-transform:uppercase; }
+    ul,ol { padding-left:21px; }
+    li { margin:6px 0; }
+    label.task { display:flex; align-items:flex-start; gap:10px; margin:10px 0; cursor:pointer; }
+    input[type=checkbox] { margin-top:5px; accent-color:var(--blue); }
+    details { margin:10px 0; border:1px solid var(--line); border-radius:12px; background:#fff; }
+    summary { padding:13px 15px; cursor:pointer; font-weight:650; }
+    details > div { padding:0 15px 14px; }
+    .section { margin-top:18px; }
+    .actions { position:sticky; bottom:16px; display:flex; justify-content:flex-end; gap:8px; pointer-events:none; }
+    button { pointer-events:auto; border:0; border-radius:999px; padding:11px 17px; background:#17181b; color:#fff; font-weight:650; cursor:pointer; box-shadow:0 8px 24px rgba(0,0,0,.18); }
+    button.secondary { background:#fff; color:#222; border:1px solid var(--line); }
+    @media (max-width:760px) { .meta,.grid { grid-template-columns:1fr; } main { width:min(100% - 20px,1120px); margin-top:18px; } h1 { font-size:28px; } table { display:block; overflow:auto; } }
+    @media print { .actions { display:none; } body { background:#fff; } .card { box-shadow:none; break-inside:avoid; } }
+  </style>
+</head>
+<body>
+<main>
+  <span class="pill">P0 上线基线</span><span class="pill">1–2 位真实用户</span><span class="pill">中国大陆实测</span>
+  <h1>Atoms Demo 上线准备清单</h1>
+  <p class="lede">这是一份一次性收齐账号、密钥、控制台设置、测试账号和代码缺口的执行清单。目标不是“能部署一个页面”，而是让用户在线完成登录、自然语言生成、真实预览、刷新恢复和继续修改。</p>
+
+  <div class="meta">
+    <div class="card metric"><strong class="ok">已就绪</strong><span>认证与持久化代码骨架、RLS 迁移、恢复 API、真实 E2E 验收脚本</span></div>
+    <div class="card metric"><strong class="warn">需你配置</strong><span>Supabase、Vercel、DashScope、GitHub、两个测试账号</span></div>
+    <div class="card metric"><strong class="stop">代码阻塞</strong><span>本地 Sandbox 尚未替换为线上 Vercel Sandbox + 持久预览发布</span></div>
+    <div class="card metric"><strong>成本目标</strong><span>先使用免费层；不承诺中国大陆网络 SLA，必须在发布前实测</span></div>
+  </div>
+
+  <div class="banner"><strong>当前结论：</strong>Supabase 配置不是唯一前置。要真正上线，还必须准备 Vercel 托管与 Sandbox 权限、模型密钥、GitHub 仓库、认证回调、两个隔离测试账号，并完成“远程构建 + 持久预览 URL”的代码适配。当前本地 <code>sandbox-exec</code> 方案不能直接在 Vercel Serverless 上运行。</div>
+
+  <section class="card section">
+    <h2>一、推荐的最小线上架构</h2>
+    <pre>浏览器
+  ├─ 主应用：Vercel Hobby（Next.js）
+  ├─ 登录/项目/消息/源码：Supabase Auth + Postgres + RLS
+  ├─ 代码生成：DashScope OpenAI-compatible API
+  └─ 生成应用
+       ├─ 临时构建：Vercel Sandbox（限时、资源隔离）
+       └─ 长期预览：每个成功版本发布为独立静态 Deployment URL</pre>
+    <p>Sandbox 只承担不可信代码的短时构建，不承担长期预览；成功构建后的 <code>dist</code> 必须发布成可恢复的静态版本。这样 Sandbox 销毁后，iframe 仍可打开，项目恢复时也不必每次等待完整构建。</p>
+  </section>
+
+  <section class="card section">
+    <h2>二、你需要一次性创建或确认的资源</h2>
+    <table>
+      <thead><tr><th>资源</th><th>P0 操作</th><th>需要回传什么</th><th>是否含秘密</th></tr></thead>
+      <tbody>
+        <tr><td>GitHub</td><td>重新登录 GitHub CLI；初始化并创建公开仓库 <code>atoms-demo</code></td><td>告诉我“GitHub 已登录”；无需发 Token</td><td>是，勿粘贴 Token</td></tr>
+        <tr><td>Vercel Hobby</td><td>用 GitHub 导入仓库；确认项目可使用 Fluid compute 与 Vercel Sandbox；选择一个生产域名</td><td>项目名、生产 URL、账号或 Team slug</td><td>否</td></tr>
+        <tr><td>Supabase Free</td><td>独立项目 <code>atoms-demo</code> 已通过 CLI 创建在 Singapore；迁移已应用</td><td>只需从该项目复制 Project URL 与 Publishable key 到 Atoms `.env.local`</td><td>Publishable key 可公开；数据库密码不要发</td></tr>
+        <tr><td>DashScope</td><td>准备线上使用的 OpenAI-compatible Base URL、API Key 与模型名</td><td>Key 直接填 Vercel环境变量；只告诉我已配置</td><td>是，勿粘贴 Key</td></tr>
+        <tr><td>验收账号</td><td>准备两个不同邮箱的已确认账号，用于验证跨用户隔离</td><td>只放本地 E2E 环境，不放生产环境；可以自行保管</td><td>是</td></tr>
+        <tr><td>中国大陆网络</td><td>至少使用移动、联通、电信中的两种网络完成真机访问</td><td>记录首页、登录、生成、预览是否成功及耗时</td><td>否</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section class="card section">
+    <h2>本机已有资源盘点：多数账号可以直接复用</h2>
+    <p class="muted">盘点只检查了配置项名称、是否有值和公开项目元数据，没有展示、复制或修改任何密钥。</p>
+    <table>
+      <thead><tr><th>能力</th><th>本机证据</th><th>结论</th><th>还需要做什么</th></tr></thead>
+      <tbody>
+        <tr><td>DashScope</td><td><code>ai-news-radar/.env.local</code> 已有 Base URL、API Key、模型；此前真实请求已验证</td><td class="ok">可直接复用账号与 Key</td><td>把同一组值安全录入 Atoms 本地环境和 Vercel；不要提交到 Git</td></tr>
+        <tr><td>Supabase</td><td>复用了同一 Supabase 账号；已新建完全独立的 <code>atoms-demo</code> Project，Project ref 为 <code>jvnweimexkigooqvagfz</code></td><td class="ok">数据库实例已完全隔离</td><td>CLI 已创建 5 张 Atoms 表、5 个 RLS policy 和 1 个保存 RPC；不再使用 ai-news-radar 的数据库 URL、Key 或表</td></tr>
+        <tr><td>Supabase Auth</td><td>新项目拥有独立 Auth 用户池和回调配置</td><td class="ok">不会影响 ai-news-radar</td><td>仍需在新项目控制台确认 Email provider、确认邮件策略和回调 URL</td></tr>
+        <tr><td>Vercel</td><td>本机至少有 3 个已关联 Vercel 项目，归属同一个 Team；Vercel CLI 已安装</td><td class="ok">无需新注册 Vercel 账号</td><td>为 Atoms 新建宿主项目和 Preview 项目；当前 CLI 没有可用登录会话</td></tr>
+        <tr><td>Vercel OIDC</td><td>另一个本地项目存在 <code>VERCEL_OIDC_TOKEN</code></td><td class="stop">不可直接搬用</td><td>OIDC Token 短时且关联项目；Atoms 完成 <code>vercel link</code> 后重新 <code>vercel env pull</code></td></tr>
+        <tr><td>GitHub</td><td>已有账号和多个 GitHub 远程仓库</td><td class="warn">账号可复用，CLI Token 已失效</td><td>只需执行 <code>gh auth login -h github.com</code>，无需新注册</td></tr>
+        <tr><td>两个 E2E 用户</td><td>本地未发现可安全复用的 Atoms 测试账号配置</td><td class="warn">仍需准备</td><td>在选定 Supabase 项目里创建两个不同邮箱用户并完成确认</td></tr>
+      </tbody>
+    </table>
+    <div class="banner"><strong>已经完成：</strong>只复用 Supabase 账号，未复用旧项目。Atoms 使用独立 Postgres、独立 Auth、独立 URL/Key 和独立迁移历史；ai-news-radar 没有收到任何写入或配置变更。</div>
+  </section>
+
+  <section class="card section">
+    <h2>Atoms 自己的环境文件：基础配置已填写</h2>
+    <p>项目已创建独立文件 <code>/Users/jiaqizhong/atoms-demo/.env.local</code>，并已加入 <code>.gitignore</code>。运行时不再读取其他项目的环境文件。</p>
+    <ol>
+      <li>用编辑器同时打开 <code>/Users/jiaqizhong/ai-news-radar/.env.local</code> 和 <code>/Users/jiaqizhong/atoms-demo/.env.local</code>；前者只用于复制模型配置。</li>
+      <li>把源文件的 <code>LLM_API_KEY</code> 和 <code>LLM_BASE_URL</code> 复制到 Atoms 的同名项。</li>
+      <li>Atoms 的 <code>LLM_MODEL</code> 保持 <code>qwen3.8-flash</code>；不要复制源项目当前的旧默认模型。</li>
+      <li>打开新项目：<a href="https://supabase.com/dashboard/project/jvnweimexkigooqvagfz">Supabase atoms-demo Dashboard</a> → <code>Connect</code> 或 <code>Project Settings → API Keys</code>。</li>
+      <li>把新项目的 Project URL 填入 Atoms 的 <code>NEXT_PUBLIC_SUPABASE_URL</code>，把 Publishable key 填入 <code>NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY</code>。</li>
+      <li><strong>不要从 ai-news-radar 复制任何 Supabase 值</strong>，也不要把新项目的 secret/service_role key 写进 Atoms。</li>
+      <li>保存 Atoms 的 <code>.env.local</code>，关闭源文件，避免误编辑另一个项目。</li>
+    </ol>
+    <p class="muted">2026-10-14 已仅检查配置是否存在：模型 API、Supabase URL 和 Publishable key 均已填写，无需重复复制。两个 E2E 测试账号尚未填写。以上步骤保留供后续轮换配置参考。</p>
+  </section>
+
+  <section class="card section">
+    <h2>2026-10-14 验证与代码复审</h2>
+    <p>Next.js 已按批准升级为 15.5.27；邮箱确认保持开启。基础环境已填写，两个测试账号和 SMTP 尚待配置。项目尚未达到线上验收。</p>
+    <details><summary>尚需修复的代码项</summary><ul>
+      <li>失败任务的消息、错误和执行事件需要保存到数据库。</li>
+      <li>恢复需使用同一数据库快照，避免读取期间版本发生变化。</li>
+      <li>数据库状态写入需通过严格验证的 RPC 收口。</li>
+      <li>独立 Origin 的预览需要签名访问控制。</li>
+      <li>线上需项目级数据库任务租约、远程 Sandbox 和静态预览部署。</li>
+      <li>冷启动验收必须实际销毁旧 Sandbox 后恢复；当前刷新测试不足以证明此项。</li>
+      <li>依赖审计仍有 PostCSS/sharp 的两项高危问题，部署前需处理；当前无 critical。</li>
+    </ul></details>
+  </section>
+
+  <section class="card section">
+    <h2>三、Supabase 控制台配置</h2>
+    <label class="task"><input type="checkbox" data-key="supabase-project" checked />CLI 已创建独立 Supabase 项目 <code>atoms-demo</code>，状态为 <code>ACTIVE_HEALTHY</code>。</label>
+    <label class="task"><input type="checkbox" data-key="supabase-migration" checked />CLI 已应用 <code>202610130001_phase2_persistence.sql</code>；只读验证结果为 5 张表、5 个 RLS policy、1 个 <code>save_project_version</code> RPC。</label>
+    <label class="task"><input type="checkbox" data-key="supabase-email" />Authentication → Providers → Email：启用邮箱密码登录。</label>
+    <label class="task"><input type="checkbox" data-key="supabase-confirm" />Authentication → Providers → Email：保留 <code>Confirm email</code> 开启（用户已确认）。公开注册上线前配置自定义 SMTP，并验证确认邮件可收到、确认链接可返回原目标页面。</label>
+    <label class="task"><input type="checkbox" data-key="supabase-site" />Authentication → URL Configuration：<code>Site URL</code> 设置为最终 Vercel 生产 URL。</label>
+    <label class="task"><input type="checkbox" data-key="supabase-redirects" />Additional Redirect URLs 添加 <code>http://localhost:3000/**</code>、生产 URL 的 <code>/**</code>，需要测试 Vercel Preview 时再添加 <code>https://*-&lt;team-or-account-slug&gt;.vercel.app/**</code>。</label>
+    <label class="task"><input type="checkbox" data-key="supabase-security" />Database Security Advisor 检查无高危项；确认所有业务表 RLS 已启用；Supabase 管理账号开启 MFA。</label>
+    <div class="banner"><strong>邮件注意：</strong>Supabase 默认 SMTP 只适合试验，并限制可发送的收件人及速率。面向任意公开用户注册时，自定义 SMTP 是 P0；仅两个固定体验账号时，可先预建账号，将 SMTP 延后。</div>
+  </section>
+
+  <section class="card section">
+    <h2>四、Vercel 控制台与环境变量</h2>
+    <p>以下变量应分别配置到 Vercel 的 Production；Preview 只在需要测试分支部署时复制。秘密变量不要加 <code>NEXT_PUBLIC_</code> 前缀。</p>
+    <table>
+      <thead><tr><th>变量</th><th>作用</th><th>环境</th><th>敏感</th><th>当前代码</th></tr></thead>
+      <tbody>
+        <tr><td><code>LLM_API_KEY</code></td><td>DashScope API Key</td><td>Production / Preview / 本地</td><td>是</td><td>已读取</td></tr>
+        <tr><td><code>LLM_BASE_URL</code></td><td>OpenAI-compatible Base URL</td><td>Production / Preview / 本地</td><td>通常否</td><td>已读取</td></tr>
+        <tr><td><code>LLM_MODEL</code></td><td>主模型，当前默认 <code>qwen3.8-flash</code></td><td>Production / Preview / 本地</td><td>否</td><td>已读取</td></tr>
+        <tr><td><code>NEXT_PUBLIC_SUPABASE_URL</code></td><td>Supabase 项目 URL</td><td>三套环境</td><td>否</td><td>已读取</td></tr>
+        <tr><td><code>NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY</code></td><td>受 RLS 保护的公开客户端 Key</td><td>三套环境</td><td>否</td><td>已读取</td></tr>
+        <tr><td><code>APP_PUBLIC_ORIGIN</code></td><td>主应用完整 Origin，例如 <code>https://atoms-demo.vercel.app</code></td><td>Production / Preview</td><td>否</td><td>已读取</td></tr>
+        <tr><td><code>VERCEL_OIDC_TOKEN</code></td><td>Vercel Sandbox 身份。生产环境由 Vercel 自动提供；本地通过 <code>vercel link</code> 与 <code>vercel env pull</code> 获取</td><td>自动 / 本地</td><td>是</td><td>远程 Sandbox 适配后使用</td></tr>
+        <tr><td><code>VERCEL_TOKEN</code></td><td>从服务端调用 Vercel REST API 发布静态预览版本</td><td>Production / Preview</td><td>是</td><td>静态发布适配后使用</td></tr>
+        <tr><td><code>VERCEL_TEAM_ID</code></td><td>仓库属于 Team 时定位资源；个人账号可按实现决定是否需要</td><td>Production / Preview</td><td>否</td><td>静态发布适配后确定</td></tr>
+        <tr><td><code>PREVIEW_VERCEL_PROJECT_ID</code></td><td>专门承载生成应用静态版本的 Vercel 项目 ID；不要误用宿主项目自动提供的 <code>VERCEL_PROJECT_ID</code></td><td>Production / Preview</td><td>否</td><td>静态发布适配后使用</td></tr>
+      </tbody>
+    </table>
+    <p class="muted">不要配置 <code>SUPABASE_SERVICE_ROLE_KEY</code> 到浏览器或本项目业务链路。当前实现使用用户会话 + RLS，服务端也不信任前端传入的 <code>user_id</code>。</p>
+  </section>
+
+  <section class="card section">
+    <h2>五、远程 Sandbox 与预览发布：上线前必须完成的代码工作</h2>
+    <div class="grid">
+      <div>
+        <h3 class="stop">当前不能直接部署的原因</h3>
+        <ul>
+          <li>现有 <code>lib/sandbox/local-sandbox.ts</code> 依赖 macOS <code>sandbox-exec</code>、本机目录和长期 Vite 子进程。</li>
+          <li>Vercel Function 文件系统与进程生命周期都不适合承载这种预览服务。</li>
+          <li><code>PREVIEW_PUBLIC_ORIGIN</code> 只是 URL 模板，不会自动创建 DNS、代理或静态站点。</li>
+        </ul>
+      </div>
+      <div>
+        <h3>最小改造范围</h3>
+        <ol>
+          <li>新增 Sandbox 接口的 Vercel 实现，限制 CPU、内存、执行时间、网络和可写目录。</li>
+          <li>在 Sandbox 中装载数据库保存的文件并运行构建；继续保留最多两轮自动修复。</li>
+          <li>把成功构建的 <code>dist</code> 发布为独立静态 Deployment。</li>
+          <li>把部署 URL 和源码版本一起原子保存；项目恢复直接加载该 URL，缺失时再重建。</li>
+          <li>iframe 只允许明确的预览 Origin；不得为了持久化把不可信应用与主站设为同源。</li>
+        </ol>
+      </div>
+    </div>
+    <p><strong>重要：</strong>这是工程阻塞，不是你再提供一个环境变量就会消失。我会在账号与变量就绪后接入并跑真实 E2E；在此之前只能证明本地受控 Sandbox 流程。</p>
+  </section>
+
+  <section class="card section">
+    <h2>六、本地真实验收所需变量</h2>
+    <p>这些变量只用于 Playwright，建议放进你本机 Shell 或未提交的测试环境文件；不要放进 Vercel Production。</p>
+    <pre>E2E_REAL_MODEL=1
+ATOMS_E2E_BASE_URL=http://127.0.0.1:3000
+E2E_PRIMARY_EMAIL=第一位测试用户邮箱
+E2E_PRIMARY_PASSWORD=第一位测试用户密码
+E2E_OTHER_EMAIL=第二位测试用户邮箱
+E2E_OTHER_PASSWORD=第二位测试用户密码
+# 仅测试新注册时使用；邮箱确认开启后需真实收信
+E2E_SIGNUP_EMAIL=
+E2E_SIGNUP_PASSWORD=</pre>
+    <p>验收必须覆盖：Todo 创建 → 深色模式 → 刷新 → 退出/重登 → 历史项目恢复 → 增加任务优先级 → 第二账号无法读取或修改第一账号项目；同时要求 0 console error、0 非预期 4xx/5xx。</p>
+  </section>
+
+  <section class="card section">
+    <h2>七、CLI 优先执行手册</h2>
+    <details open><summary>步骤 1：Supabase 登录、关联和建表</summary><div>
+      <ol>
+        <li>我在项目目录运行 <code>supabase login</code>；你只需在自动打开的浏览器里登录并把一次性 verification code 发给我。</li>
+        <li>我运行 <code>supabase projects list</code>，只核对现有目标 Project ref，不显示任何 API Key。</li>
+        <li>我在 Atoms 目录运行 <code>supabase link --project-ref &lt;目标 ref&gt;</code>。这会给本项目建立自己的 CLI 关联，不会依赖另一个项目的运行时环境文件。</li>
+        <li>我运行 <code>supabase db push</code>，只应用 `202610130001_phase2_persistence.sql`。迁移仅新建 Atoms 表，不使用 ai-news-radar 的表。</li>
+        <li>我再用只读查询验证 5 张表、RLS 和 RPC 确实存在。任何错误都会停下并报告，不会继续伪装成功。</li>
+      </ol>
+    </div></details>
+    <details><summary>步骤 2：Supabase Auth 仍需控制台确认</summary><div>
+      <ol>
+        <li>打开 Supabase Dashboard → 当前项目 → <code>Authentication</code> → <code>Providers</code> → <code>Email</code>。</li>
+        <li>确认 Email provider 已启用，并保持 <code>Confirm email</code> 开启。</li>
+        <li>进入 Authentication → SMTP Settings，启用自定义 SMTP。填写发件人邮箱、发件人名称、SMTP Host、Port、Username 和 Password；凭据只在服务控制台或本机安全输入，不发送到聊天。若提供商要求域名验证，在域名 DNS 控制台添加其给出的 SPF/DKIM 记录，等待验证通过。</li>
+        <li>使用真实邮箱注册，检查收件箱和垃圾邮件；点击确认链接，验证回到 Atoms 且已登录。此项通过前，公开注册仍未验收。</li>
+        <li>进入 <code>URL Configuration</code>：本地阶段 Site URL 填 <code>http://localhost:3000</code>，Redirect URLs 添加 <code>http://localhost:3000/**</code>。</li>
+        <li>进入 <code>Users</code>，创建两个不同邮箱用户并设为已确认；账号密码只写进 Atoms `.env.local`。</li>
+        <li>成功标准：两个用户都能登录；第二个用户查询第一个用户的 project ID 时得到无权访问。</li>
+      </ol>
+    </div></details>
+    <details><summary>步骤 3：GitHub CLI 与仓库</summary><div>
+      <ol>
+        <li>我运行 <code>gh auth login -h github.com</code>；你在浏览器完成一次授权。</li>
+        <li>我在当前目录初始化 Git，并在提交前检查差异和密钥扫描。</li>
+        <li>我创建个人账号下公开仓库 <code>atoms-demo</code> 并推送。没有测试通过不会提交。</li>
+      </ol>
+    </div></details>
+    <details><summary>步骤 4：Vercel CLI、宿主项目和环境变量</summary><div>
+      <ol>
+        <li>我运行 <code>vercel login</code>；你完成浏览器授权。</li>
+        <li>我运行 <code>vercel link</code> 创建或关联新的 Atoms 宿主项目，不复用 ai-radar 的 Vercel Project。</li>
+        <li>我通过 <code>vercel env add</code> 上传 Atoms `.env.local` 中的模型和 Supabase 变量。CLI 会把值作为 Secret 传输，不写入 Git。</li>
+        <li>首次 <code>vercel deploy</code> 获得 URL 后，把 <code>APP_PUBLIC_ORIGIN</code> 和 Supabase Site URL 改成该生产地址并重新部署。</li>
+        <li>创建单独 Preview Project 后，再配置 <code>VERCEL_TOKEN</code>、<code>VERCEL_TEAM_ID</code>、<code>PREVIEW_VERCEL_PROJECT_ID</code>。</li>
+      </ol>
+    </div></details>
+    <details><summary>步骤 5：真实验收和大陆网络</summary><div>
+      <ol>
+        <li>先本地运行 Phase 2 Playwright，验证两账号隔离、刷新恢复、Sandbox 重建和继续修改。</li>
+        <li>完成 Vercel Sandbox + 静态发布适配后，在生产 URL 重跑同一套 E2E。</li>
+        <li>最后使用至少两种大陆运营商网络真机测试首页、登录、生成和 iframe 预览；记录失败比例和耗时。</li>
+      </ol>
+    </div></details>
+  </section>
+
+  <section class="card section">
+    <h2>八、一次性回传模板</h2>
+    <p>敏感值请直接写入对应控制台，不要粘贴到聊天。完成后把下面这段的状态发回即可：</p>
+    <pre>GitHub CLI：已登录 / 未登录
+Vercel 项目：已创建 / 未创建
+Vercel 生产 URL：
+Vercel Team 或账号 slug：
+Vercel Sandbox：控制台可用 / 不可用 / 未确认
+Supabase 项目：已创建 / 未创建
+Supabase Project ref：
+Supabase URL 与 Publishable key：已写入本地和 Vercel / 尚未
+数据库迁移：已执行 / 尚未
+邮箱确认策略：保持开启；自定义 SMTP 已配置 / 待配置
+两个测试账号：已准备 / 尚未
+DashScope 变量：已写入 Vercel / 尚未
+自定义域名：本月不用 / 已有（填写域名）</pre>
+  </section>
+
+  <section class="card section">
+    <h2>九、官方依据与明确边界</h2>
+    <ul>
+      <li><strong>观察：</strong>Vercel Sandbox 官方推荐在 Vercel 生产环境使用自动 OIDC；本地通过 <code>vercel link</code> 和 <code>vercel env pull</code> 获取开发凭证。<a href="https://vercel.com/docs/sandbox">Vercel Sandbox 文档</a></li>
+      <li><strong>观察：</strong>Vercel Hobby 当前 Sandbox 配额包括每月 5 小时 Active CPU、10 个并发 Sandbox、单次最长 45 分钟；超额后停止创建而不是自动收费。任务结束必须立即停止 Sandbox。<a href="https://vercel.com/docs/sandbox/pricing">Sandbox 价格与配额</a></li>
+      <li><strong>观察：</strong>Vercel REST API 创建 Deployment 需要 Access Token；每次部署会产生独立 URL。<a href="https://vercel.com/docs/rest-api">REST API</a> · <a href="https://vercel.com/docs/deployments/overview">Deployment 概览</a></li>
+      <li><strong>观察：</strong>Hobby 旧 Deployment 有保留数量限制，因此 Deployment URL 不能替代数据库中的源码与版本快照；预览丢失时必须能从持久化源码重建。</li>
+      <li><strong>观察：</strong>Supabase 要求生产 Site URL 使用精确地址，Vercel Preview 可使用通配符回调。<a href="https://supabase.com/docs/guides/auth/redirect-urls">Redirect URLs</a></li>
+      <li><strong>观察：</strong>Supabase 默认 SMTP 有收件人和速率限制，不适合作为公开注册的生产邮件服务。<a href="https://supabase.com/docs/guides/auth/auth-smtp">SMTP 文档</a></li>
+      <li><strong>观察：</strong>Supabase Free 项目可能因一段时间低活动而暂停，且免费层没有可下载数据库备份保证。<a href="https://supabase.com/docs/guides/deployment/going-into-prod">Production Checklist</a></li>
+      <li><strong>观察：</strong>Vercel 官方不在中国大陆运营服务器或 CDN 节点，<code>vercel.app</code> 访问可能被限速或阻断；自定义域名也不能形成可用性承诺。<a href="https://vercel.com/kb/guide/accessing-vercel-hosted-sites-from-mainland-china">中国大陆访问说明</a></li>
+      <li><strong>推断：</strong>对于本月 1–2 位受控真实用户，免费层大概率足够；但这不是 SLA，也不能保证中国大陆跨境链路稳定。</li>
+    </ul>
+  </section>
+
+  <div class="actions">
+    <button class="secondary" id="reset">重置勾选</button>
+    <button id="export">复制当前清单为 Markdown</button>
+  </div>
+</main>
+<script>
+  const boxes = [...document.querySelectorAll('input[type="checkbox"][data-key]')];
+  boxes.forEach(box => {
+    const saved = localStorage.getItem(`atoms-launch-${box.dataset.key}`);
+    if (saved !== null) box.checked = saved === '1';
+    box.addEventListener('change', () => localStorage.setItem(`atoms-launch-${box.dataset.key}`, box.checked ? '1' : '0'));
+  });
+  document.querySelector('#reset').addEventListener('click', () => {
+    boxes.forEach(box => { box.checked = false; localStorage.removeItem(`atoms-launch-${box.dataset.key}`); });
+  });
+  document.querySelector('#export').addEventListener('click', async event => {
+    const lines = ['# Atoms Demo 上线配置进度', ''];
+    boxes.forEach(box => lines.push(`- [${box.checked ? 'x' : ' '}] ${box.parentElement.textContent.trim()}`));
+    lines.push('', '## 回传状态', '', 'GitHub CLI：', 'Vercel 生产 URL：', 'Vercel Team/账号 slug：', 'Vercel Sandbox：', 'Supabase Project ref：', 'Supabase 环境变量：', '数据库迁移：', '邮箱确认策略：', '两个测试账号：', 'DashScope 环境变量：');
+    await navigator.clipboard.writeText(lines.join('\n'));
+    const button = event.currentTarget;
+    const old = button.textContent;
+    button.textContent = '已复制';
+    setTimeout(() => button.textContent = old, 1600);
+  });
+</script>
+</body>
+</html>
