@@ -10,6 +10,7 @@
 
 ## 正式部署与线上验收进行中（以下旧记录为历史，不代表当前状态）
 
+- 用户更新README受众为技术面试评委：当前README收敛为项目目标、显式体验网址、验收流程、技术架构与工程取舍（含Codex/REA）、精简本地运行、验证方式和真实后续边界。移除个人发信服务/凭据字段与操作/内部运维和报告链接，不夸大商业能力、保留localStorage与宿主DB及macOS本地限制。用户另要求仓库介绍下方体验入口，已用gh只更新Homepage为https://atoms-demo-jiaqi.vercel.app/并回读，原描述保留。只清理当前README，不重写Git历史、不删其他文档/用户数据，不修改业务或环境、不主动重新部署。当前新README文档检查后按本轮已授权继续推送。
 - 用户已明确批准本轮README提交推送：仅README.md与交接记录，下面“等待确认”属于已结束的历史阶段。文档链接/命令检查、diffcheck和独立读者审查通过；不改业务代码/env/锁，不主动重新部署网站。推送结果以本轮Git提交与远端main核对为准。
 - README定向读者复核完成：两项Important已关闭，当前Critical0/Important0；本轮只验证文档/路径/命令/安全差异，无业务测试或部署。仍等待用户确认本次文档提交推送。
 - README当前已按用户追加要求重写为中文：项目定位/已实现功能、技术及REA调研用途、线上短时Sandbox→私有产物→签名独立Origin网关→iframe架构、localStorage与宿主DB分层、本地macOS/Node24/npmci/3010环境配置/Supabase独立迁移与SMTP/按需Playwright，以及失败任务持久化/统一快照读取/孤儿GC/额度保护/投递与真机网络/暂缓Google和分享发布等后续事项。保留“本项目使用 Codex 开发。”；去掉旧README匿名curl和远程适配未完成的过时说明。只改README与此交接记录，无.env/lock/业务代码或服务配置变更，未重新部署。文档内4个本地链接和npm脚本核对通过、diffcheck0、README差异gitleaks无泄露；未重跑功能测试/构建（纯文档）。fresh reader审查发现SMTP步骤及模板旧云字段提示不足，已补明确操作和官方链接，定向复核中。已异步请求是否允许本次文档commit/push，收到明确答复前不推送；当前README仍本地未提交。
