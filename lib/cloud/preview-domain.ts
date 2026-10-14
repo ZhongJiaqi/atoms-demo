@@ -18,6 +18,32 @@ export function ensurePreviewAlias(projectId: string, deploymentId: string, opti
   return resolvePreviewAlias(projectId, deploymentId, options, false);
 }
 
+// The deny-project must be independently confirmed to exist in the same Atoms
+// team by the control plane, so team-wide tokens cannot pass this probe.
+// A 404 is not proof of restricted authority. Recheck with the same token before
+// binding; platform project permissions, not our non-atomic GET, constrain writes.
+export async function ensureScopedPreviewAlias(projectId: string, deploymentId: string, options: AliasOptions = {}): Promise<string> {
+  if (typeof window !== "undefined") throw new Error("预览域名管理仅允许服务端调用");
+  previewHost(projectId);
+  if (!/^dpl_[A-Za-z0-9]+$/.test(deploymentId)) throw new Error("必须提供明确的部署 ID");
+  const deniedProjectId = process.env.ATOMS_SCOPE_DENY_PROJECT_ID;
+  if (!deniedProjectId || !/^prj_[A-Za-z0-9]+$/.test(deniedProjectId) || deniedProjectId === ATOMS_VERCEL_PROJECT_ID) {
+    throw new Error("必须配置独立确认存在的 ATOMS_SCOPE_DENY_PROJECT_ID");
+  }
+  const token = options.token ?? process.env.ATOMS_VERCEL_API_TOKEN;
+  if (!token) throw new Error("缺少 ATOMS_VERCEL_API_TOKEN");
+  const request = options.fetch ?? fetch;
+  const readProject = (id: string) => request(`https://api.vercel.com/v9/projects/${id}?teamId=${ATOMS_VERCEL_TEAM_ID}`, {
+    method: "GET", headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+    redirect: "error", signal: AbortSignal.timeout(15000),
+  });
+  const own = await readProject(ATOMS_VERCEL_PROJECT_ID);
+  if (own.status !== 200 || (await own.json())?.id !== ATOMS_VERCEL_PROJECT_ID) throw new Error("管理凭据不能确认 Atoms 项目权限");
+  const foreign = await readProject(deniedProjectId);
+  if (foreign.status !== 403) throw new Error("管理凭据未证明拒绝其他项目，禁止自动绑定预览域名");
+  return bindPreviewAlias(projectId, deploymentId, { token, fetch: request });
+}
+
 // Control-plane operations only, after independently verifying the management token
 // is restricted to the Atoms project. GET then POST is not atomic: these ownership
 // checks cannot prevent a concurrent reassignment. Do not wire this into runtime

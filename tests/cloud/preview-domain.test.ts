@@ -6,6 +6,7 @@ const host = "atoms-app-123e4567-e89b-42d3-a456-426614174000.vercel.app";
 const projectId = "prj_Qy0ugq79jGkv9gAGc1vVeNtMpdkm";
 const teamId = "team_t41qF1poOXtcPYCh009TSUpt";
 const deploymentId = "dpl_testAtoms";
+const foreignProjectId = "prj_knownExistingForeign";
 async function subject() {
   const module = await import("../../lib/cloud/preview-domain.ts").catch(() => null);
   assert.ok(module, "缺少稳定预览域名模块");
@@ -27,6 +28,16 @@ function boundary(responses: Response[]) {
 }
 const deployment = { id: deploymentId, projectId, readyState: "READY" };
 const alias = { uid: "alias_test", alias: host, projectId, deploymentId };
+
+function configuredDeny(project: string | undefined): () => void {
+  const previous = process.env.ATOMS_SCOPE_DENY_PROJECT_ID;
+  if (project === undefined) delete process.env.ATOMS_SCOPE_DENY_PROJECT_ID;
+  else process.env.ATOMS_SCOPE_DENY_PROJECT_ID = project;
+  return () => {
+    if (previous === undefined) delete process.env.ATOMS_SCOPE_DENY_PROJECT_ID;
+    else process.env.ATOMS_SCOPE_DENY_PROJECT_ID = previous;
+  };
+}
 
 test("完整UUID生成稳定独立origin并拒绝非法项目ID", async () => {
   const { previewHost, previewOrigin } = await subject();
@@ -85,12 +96,12 @@ test("运行时只核验现有绑定，缺失或旧部署alias均拒绝自动POS
 });
 
 test("浏览器不能使用域名管理凭据发请求", async () => {
-  const { ensurePreviewAlias, bindPreviewAlias } = await subject();
+  const { ensurePreviewAlias, bindPreviewAlias, ensureScopedPreviewAlias } = await subject();
   const previous = Object.getOwnPropertyDescriptor(globalThis, "window");
   Object.defineProperty(globalThis, "window", { value: {}, configurable: true });
   let requests = 0;
   try {
-    for (const entry of [ensurePreviewAlias, bindPreviewAlias]) {
+    for (const entry of [ensurePreviewAlias, bindPreviewAlias, ensureScopedPreviewAlias]) {
       await assert.rejects(entry(id, deploymentId, {
         token: "test-management-token", fetch: async () => { requests++; return json(deployment); },
       }), /服务端/);
@@ -99,5 +110,47 @@ test("浏览器不能使用域名管理凭据发请求", async () => {
   } finally {
     if (previous) Object.defineProperty(globalThis, "window", previous);
     else Reflect.deleteProperty(globalThis, "window");
+  }
+});
+
+test("自动绑定仅在同Token读取Atoms成功且已存在其他项目403之后POST", async () => {
+  const { ensureScopedPreviewAlias } = await subject();
+  assert.equal(typeof ensureScopedPreviewAlias, "function", "缺少真实项目权限验证入口");
+  const restore = configuredDeny(foreignProjectId);
+  try {
+    const { requests, fetcher } = boundary([json({ id: projectId }), json({}, 403), json(deployment), json({}, 404), json({ uid: "alias_test", alias: host }), json(alias)]);
+    const options = { token: "test-management-token", fetch: fetcher, denyProjectId: "prj_clientSelected" };
+    assert.equal(await ensureScopedPreviewAlias(id, deploymentId, options), `https://${host}`);
+    assert.equal(new URL(requests[0].url).pathname, `/v9/projects/${projectId}`);
+    assert.equal(new URL(requests[1].url).pathname, `/v9/projects/${foreignProjectId}`);
+    assert.equal(requests[4].init?.method, "POST");
+    assert.equal(requests.length, 6);
+  } finally { restore(); }
+});
+
+test("自身项目错误或其他项目返回200及404都拒绝绑定且零POST", async () => {
+  const { ensureScopedPreviewAlias } = await subject();
+  assert.equal(typeof ensureScopedPreviewAlias, "function", "缺少真实项目权限验证入口");
+  const restore = configuredDeny(foreignProjectId);
+  try {
+    for (const responses of [[json({}, 403)], [json({ id: "prj_other" })], [json({ id: projectId }), json({ id: foreignProjectId })], [json({ id: projectId }), json({}, 404)], [json({ id: projectId }), json({}, 401)]]) {
+      const { requests, fetcher } = boundary(responses);
+      await assert.rejects(ensureScopedPreviewAlias(id, deploymentId, { token: "test-management-token", fetch: fetcher }));
+      assert.ok(requests.every(request => request.init?.method === "GET"));
+    }
+  } finally { restore(); }
+});
+
+test("deny项目必须来自服务器配置，缺失非法或自身ID时零网络请求", async () => {
+  const { ensureScopedPreviewAlias } = await subject();
+  assert.equal(typeof ensureScopedPreviewAlias, "function", "缺少真实项目权限验证入口");
+  for (const deny of [undefined, "prj_x?query=evil", projectId]) {
+    const restore = configuredDeny(deny);
+    let requests = 0;
+    try {
+      const options = { token: "test-management-token", denyProjectId: foreignProjectId, fetch: async () => { requests++; return json({ id: projectId }); } };
+      await assert.rejects(ensureScopedPreviewAlias(id, deploymentId, options), /ATOMS_SCOPE_DENY_PROJECT_ID/);
+      assert.equal(requests, 0);
+    } finally { restore(); }
   }
 });

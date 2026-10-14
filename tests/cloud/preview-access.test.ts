@@ -37,19 +37,26 @@ test("gateway实际读取字节超限即停止，即使响应未声明Content-Le
   }finally{if(before===undefined)delete process.env.ATOMS_PREVIEW_GRANT_SECRET;else process.env.ATOMS_PREVIEW_GRANT_SECRET=before;}
 });
 
-test("已保存版本签发对应稳定origin的短期grant，管理路径只核验GET",async t=>{
+test("已保存版本签发短期grant前验证项目限定权限并自动绑定新预览地址",async t=>{
   const module=await import("../../lib/cloud/preview-access.ts");
   assert.equal(typeof module.createCloudPreviewLink,"function","缺少签名链接签发");
   const owner="123e4567-e89b-42d3-a456-426614174001",project="123e4567-e89b-42d3-a456-426614174002",run="123e4567-e89b-42d3-a456-426614174003";
-  const names=["ATOMS_PREVIEW_GRANT_SECRET","VERCEL_DEPLOYMENT_ID","ATOMS_VERCEL_API_TOKEN"];
+  const names=["ATOMS_PREVIEW_GRANT_SECRET","VERCEL_DEPLOYMENT_ID","ATOMS_VERCEL_API_TOKEN","ATOMS_SCOPE_DENY_PROJECT_ID"];
   const before=names.map(name=>process.env[name]);
   process.env.ATOMS_PREVIEW_GRANT_SECRET="test-only-preview-secret-32bytes-minimum";
   process.env.VERCEL_DEPLOYMENT_ID="dpl_TestOnly123";
   process.env.ATOMS_VERCEL_API_TOKEN="test-only-management-boundary";
+  process.env.ATOMS_SCOPE_DENY_PROJECT_ID="prj_knownForeign";
   const path=artifactObjectPath(owner,project,run);
+  let permissionProbes=0,aliasReads=0,posts=0;
   t.mock.method(globalThis,"fetch",async(input:RequestInfo|URL,init?:RequestInit)=>{
-    assert.ok(!init?.method || init.method === "GET","runtime不能自动绑定域名");
-    return Response.json(String(input).includes("/deployments/") ? {id:"dpl_TestOnly123",projectId:ATOMS_VERCEL_PROJECT_ID,readyState:"READY"} : {alias:previewHost(project),projectId:ATOMS_VERCEL_PROJECT_ID,deploymentId:"dpl_TestOnly123"});
+    const pathname=new URL(String(input)).pathname;
+    if(pathname===`/v9/projects/${ATOMS_VERCEL_PROJECT_ID}`){permissionProbes++;return Response.json({id:ATOMS_VERCEL_PROJECT_ID});}
+    if(pathname==="/v9/projects/prj_knownForeign"){permissionProbes++;return Response.json({}, {status:403});}
+    if(init?.method==="POST"){assert.equal(permissionProbes,2);posts++;return Response.json({uid:"alias_test",alias:previewHost(project)});}
+    if(pathname.startsWith("/v13/deployments/"))return Response.json({id:"dpl_TestOnly123",projectId:ATOMS_VERCEL_PROJECT_ID,readyState:"READY"});
+    aliasReads++;
+    return aliasReads===1 ? Response.json({}, {status:404}) : Response.json({alias:previewHost(project),projectId:ATOMS_VERCEL_PROJECT_ID,deploymentId:"dpl_TestOnly123"});
   });
   const client={auth:{getUser:async()=>({data:{user:{id:owner}},error:null})},storage:{from:()=>({createSignedUrl:async(_path:string,ttl:number)=>{
     assert.equal(_path,path);assert.equal(ttl,300);
@@ -63,6 +70,7 @@ test("已保存版本签发对应稳定origin的短期grant，管理路径只核
     const grant=verifyPreviewGrant(url.searchParams.get("grant")!,{host:url.hostname,projectId:project});
     assert.equal(grant.version,2);assert.equal(grant.artifactPath,path);
     assert.equal(result.expiresAt,grant.expiresAt*1000);
+    assert.equal(permissionProbes,2);assert.equal(posts,1);assert.equal(aliasReads,2);
   }finally{names.forEach((name,index)=>{if(before[index]===undefined)delete process.env[name];else process.env[name]=before[index];});}
 });
 

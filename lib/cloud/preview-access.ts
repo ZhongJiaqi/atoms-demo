@@ -1,6 +1,6 @@
 import { artifactObjectPath, createSignedArtifactUrl, MAX_ARTIFACT_BYTES, validateArtifactBundle } from "./artifacts.ts";
 import { createPreviewGrant, verifyPreviewGrant } from "./preview-grant.ts";
-import { ensurePreviewAlias } from "./preview-domain.ts";
+import { ensureScopedPreviewAlias } from "./preview-domain.ts";
 import { renderArtifactPreview } from "./render-artifact-preview.ts";
 
 export function versionArtifactPath(bundle: {
@@ -18,7 +18,7 @@ export function versionArtifactPath(bundle: {
 export async function createCloudPreviewLink(client: Parameters<typeof createSignedArtifactUrl>[0], projectId: string, version: number, artifactPath: string) {
   const deploymentId=process.env.VERCEL_DEPLOYMENT_ID;
   if (!deploymentId) throw new Error("缺少当前 VERCEL_DEPLOYMENT_ID，无法核验预览域名");
-  const origin=await ensurePreviewAlias(projectId,deploymentId);
+  const origin=await ensureScopedPreviewAlias(projectId,deploymentId);
   const signedArtifactUrl=await createSignedArtifactUrl(client,projectId,artifactPath,300);
   const grant=createPreviewGrant({projectId,version,artifactPath,signedArtifactUrl});
   const payload=verifyPreviewGrant(grant,{host:new URL(origin).hostname,projectId});
