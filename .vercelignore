@@ -1,0 +1,13 @@
+.git/
+.next/
+node_modules/
+.env
+.env.*
+generated-projects/
+test-results/
+playwright-report/
+supabase/.temp/
+sandbox-template/dist/
+*.log
+*.tsbuildinfo
+.DS_Store
