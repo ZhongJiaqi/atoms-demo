@@ -1,6 +1,6 @@
 # Atoms Demo 项目交接文档
 
-更新时间：2026-10-14（Asia/Shanghai）
+更新时间：2026-10-15（Asia/Shanghai）
 
 ## 当前测试执行策略（用户最新指令，后续会话必须遵守）
 
@@ -9,6 +9,8 @@
 - 已有失败先定位根因，不反复跑整套碰运气。安全检查、真实核心验证仍必需。每次交付准确报告已运行、未运行与残留风险；此规则覆盖旧Skill默认每改一处都全量验证的频率要求，不免除TDD先RED→GREEN。
 
 ## 正式部署与线上验收进行中（以下旧记录为历史，不代表当前状态）
+
+- 最新回撤已完成：回滚源码commit/push0515e17194dd2beb4c78d9d3e0eab196161b4c0f，远端回读一致；57853正式云构建成功READY dpl_CRH8BfvaUawDrQ58K5qxJPbLKpa8（qzifvy390），21416正式域名inspect指向该新部署。56288真实公开导航smoke4passed（登录注册入口回首页、1470/320/375首页，无console/pageerror/HTTP错误），无账号创建或模型调用。9相关unit、typecheck、literal model.ts==27b839d^、独立review C/I0、diffcheck/gitleaks通过；未跑全量或重新真实生成/多轮回归，恢复的是先前已通过正式三轮的原模型调用代码。生产保持DeepSeek、创建8k/增量16k，无env/lock/DB/权限变化。设计Skill仅P1计划，暂不继续优化或安装；用户已有生成大色块项目未被改写，若要改变它们须另发修改需求。本轮随后只推送HTML报告及交接状态，不因纯文档重复部署。以下hf6w视觉强化发布等记录均为历史，不能当当前状态。
 
 - 2026-10-15用户反馈新日记/习惯生成大色块突兀，决定“设计Skill先后续计划，当前Prompt回滚上一个版本”。root仅恢复lib/agent/model.ts为27b839d^（即30073e2预算版）的完整文件，literal equality验证通过；恢复上一版视觉及原场景例子，8k/16k、JSON尝试/SDK/沙盒/DeepSeek/env/锁/DB不变，9相关unit fresh passed。README与docs/说明文档同步回撤，新增运行时设计Skill适配为P1计划（未实现，不安装Skill）；docs/FRONTEND_PROMPT_REPORT.html顶部记录回撤，将此前pass/deploy列为历史，不抹掉失败或把功能pass当审美合格。下一步review、指定文件commit/push、重新部署恢复正式站和零模型公开导航smoke；旧用户项目不会自动变样，不删除用户数据或额外真实生成消耗额度。当前线上尚为hf6w...新视觉版，不能提前声称线上回滚完成。
 
