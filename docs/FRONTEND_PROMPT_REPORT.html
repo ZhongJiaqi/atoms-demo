@@ -1,0 +1,15 @@
+<!doctype html><html lang="zh-CN"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>生成应用视觉 Prompt 定向优化</title>
+<style>body{font:16px/1.7 system-ui,sans-serif;background:#f4f3ef;color:#25312d;max-width:960px;margin:auto;padding:30px 20px}section{background:#fff;border:1px solid #dedfd8;border-radius:18px;padding:24px;margin:20px 0}h1{font-size:30px;line-height:1.3}h2{font-size:21px}table{width:100%;border-collapse:collapse}th,td{padding:12px;text-align:left;vertical-align:top;border-bottom:1px solid #e7e7e0}a{color:#166b54}code{overflow-wrap:anywhere;font-size:13px}.scroll{overflow:auto}</style>
+<h1>生成应用视觉 Prompt 定向优化</h1><p>2026-10-14 · 保持 DeepSeek · 本地真实样本评估</p>
+<section><h2>目标与改动</h2><p>让简单需求生成有辨识度、层次清楚、能实际操作的小型应用。生产代码仅调整 model.ts 的共享产品视觉要求及两条场景例子；不改模型、8k/16k预算、SDK参数、超时、JSON重试、沙盒、权限、环境或依赖。原极简偏好、已有项目风格和业务数据仍优先。</p></section>
+<section><h2>调研依据与适配</h2><p>官方建议从字体、配色、动效和背景分别给出具体指导，并选定明确风格、避免通用模板。<a href="https://platform.claude.com/cookbook/coding-prompting-for-frontend-aesthetics">Anthropic 前端视觉提示词指南</a></p><p>本项目保留中文 XML 任务、上下文、约束、例子与 JSON 合同，按用户模板适配代码生成场景。只使用系统字体、CSS和内联SVG，不照搬外部字体、动画库或Claude专用API参数。该指南针对Claude，迁移到DeepSeek的效果仅由当前真实样本观察，不宣称普遍有效。</p></section>
+<section><h2>视觉要求</h2><p>明确一种场景风格；主色加克制辅助色；桌面标题、正文和数字层级；按任务组织主次布局；空状态加入小型场景插画和下一步。保留可访问表单、页面内确认、减少动效设置、空数据与localStorage兼容。精致不等于添加无用业务、假数据或大量装饰。</p></section>
+<section><h2>真实生成观察</h2><div class="scroll"><table><tr><th>相同短需求</th><th>改前缓存真实样本</th><th>新真实样本</th></tr>
+<tr><td>做一个待办事项应用</td><td>浅灰背景、等宽白色统计卡片、28px标题，视觉主次较弱。</td><td>暖纸色／珊瑚强调色、40px标题、紧凑进度概览、线描清单空状态。模型31.6秒，构建就绪32.5秒。</td></tr>
+<tr><td>做一个个人记账应用</td><td>浅灰背景、四张等权重概览卡片、26px标题。</td><td>第一样本：深墨绿标题与余额区域、奶白内容区、账本插画；模型38.7秒，构建就绪39.7秒，但漏编辑，不接受为完整通过。</td></tr>
+<tr><td>记账最终接受样本</td><td>同一个短需求，没有向用户需求追加设计细节。</td><td>明确编辑例子后真实重新生成，保留墨绿／奶白视觉；第一次TS2322构建失败，通过现有真实日志修复一轮构建成功。原生成37.7秒，修复阶段35.5秒；缓存复验不计为首次总耗时。</td></tr>
+</table></div><p>改前样本复用已有真实源码，未重新调用模型；随机性和样本数量限制了比较，不给“美观提升百分比”或模型普遍成功率。时间截至本机构建，不含线上VM和完整用户等待。</p></section>
+<section><h2>验证结果</h2><p id="status">本地通过，未部署。最终合并Playwright 94998：4 passed / 0 failed；待办完整增搜改完成删、真刷新保留和手机添加，记账88.50→编辑90.00→精确支出／结余→搜索→真刷新保留→确认删除→再刷新保留删除，390px无溢出。两样本正常console/pageerror/HTTP错误及外部请求0。预算／文件安全／云执行相关9项通过，typecheck及完整生产构建72140通过。</p><p>过程失败保留：旧样本视觉RED 54313（标题28/26）；首个记账漏编辑被45332真实CRUD捕获（待办通过）；90591第二个记账TS2322，47226真实模型修复一轮；68045零模型缓存复验保留修复记录，readyMs设null、本轮构建耗时单列，不冒称首次完整生成时间。首个失败样本不计为通过。</p><p>独立审查Critical/Important 0。原SVG断言曾匹配全页面图标，已改为空状态文案父容器内的可见SVG并检查尺寸；自动测试只证明限定视觉合同，配色和整体观感由截图观察。没有验证所有色彩对比、动效、存储异常、生成场景或多轮修改组合。</p></section>
+<section><h2>范围与回退</h2><p>当前不切回Flash、不实现fallback、不修改既有用户项目；新Prompt只影响后续模型调用，不会自动美化已经生成的应用。没有重跑全量回归、认证或邮件投递。若新样本功能或视觉不满足，继续保留已上线版本；本轮Prompt修改可以单独回退，不回滚数据库。</p></section>
+</html>

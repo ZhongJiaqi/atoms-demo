@@ -9,8 +9,8 @@ import { chromium } from 'playwright';
 import { expect } from '@playwright/test';
 import nextEnv from '@next/env';
 import { EnvHttpProxyAgent, setGlobalDispatcher } from 'undici';
-import { generateProject } from '../../lib/agent/model.ts';
-import { prepareProjectDirectory, loadGeneratedProject } from '../../lib/agent/files.ts';
+import { generateProject, repairProject } from '../../lib/agent/model.ts';
+import { prepareProjectDirectory, loadGeneratedProject, writeGeneratedFiles } from '../../lib/agent/files.ts';
 import { buildProject, startPreview, stopPreview } from '../../lib/sandbox/local-sandbox.ts';
 
 nextEnv.loadEnvConfig(process.cwd(), false, { info() {}, error() {} });
@@ -40,10 +40,27 @@ try {
       const dir = cached?.directory??await prepareProjectDirectory(id, requirement, generated.project, root);
       result.directory = dir;
       if(!cached)await writeFile(join(dir,'eval-source.json'),JSON.stringify(generated.project),{mode:0o600});
-      const built = await buildProject(dir);
-      await writeFile(join(dir,'eval-build.log'),built.stdout+built.stderr);
+      let built = await buildProject(dir), candidate = generated.project;
+      await writeFile(join(dir,'eval-build.log'),built.stdout+built.stderr,{flag:'wx'}).catch(error=>{if(error.code!=='EEXIST')throw error;});
+      result.reused = Boolean(cached);
+      result.repairRounds = cached?.repairRounds ?? 0;
+      result.repairMs = cached?.repairMs ?? 0;
+      let currentRepairRounds = 0;
+      const repairStarted = Date.now();
+      for (let round = 1; !built.success && round <= 2; round++) {
+        const repaired = await repairProject(requirement, candidate, built.stdout+built.stderr, round);
+        assert.equal(repaired.model, process.env.LLM_MODEL);
+        candidate = repaired.project;
+        await writeGeneratedFiles(dir, candidate);
+        built = await buildProject(dir);
+        currentRepairRounds = round;
+        await writeFile(join(dir,`eval-repair-${round}.log`),built.stdout+built.stderr);
+      }
+      result.repairRounds += currentRepairRounds;
+      result.repairMs += currentRepairRounds ? Date.now() - repairStarted : 0;
       assert(built.success,'Generated project must pass the existing controlled build');
-      result.readyMs = cached?.readyMs??Date.now() - started;
+      result.validationMs = Date.now() - started;
+      result.readyMs = cached ? null : result.validationMs;
       const entry = await startPreview(id,dir);
       context = await browser.newContext({ viewport:{width:1440,height:900}, colorScheme:'light' });
       context.setDefaultTimeout(8000);
