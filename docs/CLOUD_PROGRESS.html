@@ -18,11 +18,11 @@ code{font-size:13px;background:#edf2fa;padding:2px 6px;border-radius:5px;overflo
 <main>
 <p class="status">2026-10-14 · 主站已上线，核心登录后流程与三个代表应用已取得通过证据</p>
 <h1>Atoms Demo 云端接入进度</h1>
-<section><h2>新增品牌与返回首页</h2><p>首页、登录/注册统一显示Atoms Demo；工作区图标支持点击与键盘返回首页。生成或恢复中沿用原保护，避免中断任务。仅调整品牌与必要响应式样式，不改变Supabase Auth或Agent。</p><p>本地生产构建、108单元及16项品牌/认证导航/工作区回归通过；独立复核无阻断，手机与桌面截图已查看。正在准备正式发布，尚不声称线上已有新品牌。</p></section>
+<section><h2>品牌与返回首页已上线</h2><p>首页、登录/注册统一显示Atoms Demo；工作区图标支持点击与键盘返回首页。生成或恢复中沿用原保护，避免中断任务。使用frontend-design延续原风格，仅调整品牌与必要响应式样式，不改变Supabase Auth或Agent。</p><p>本地生产构建、108单元及16项品牌/认证导航/工作区回归通过；独立复核无阻断，手机与桌面截图已查看。正式发布后仅执行受影响的7项品牌导航回归，全部通过、无非预期控制台或HTTP错误。</p><p>按新版AGENTS.md采用增量验证。本次UI版本没有重跑真实模型全链路或全量E2E；真实手机、大陆网络及恢复期间独立交互尚未验证。</p></section>
 <section>
 <h2>当前正式版本</h2>
 <p><a href="https://atoms-demo-jiaqi.vercel.app">https://atoms-demo-jiaqi.vercel.app</a></p>
-<p>正式部署 <code>dpl_8u49EVVJXcrQaZbqg2SStB4wyJQi</code> 已确认 READY，发布源文件143项；真实主站 GET 返回200及HTML。此版本包含旧版本云封面的诚实占位修复。</p>
+<p>正式部署 <code>dpl_APQjF6nXZt8SCuKAWHz1yKWhnnb5</code> 已确认 READY，发布源文件146项。主站已通过品牌导航7项浏览器检查；保持旧版本云封面的诚实占位修复。</p>
 <p class="status">已有账号可登录体验核心线上流程；真实Todo完整链路已通过，三个代表应用分两轮取得通过证据。公众注册邮件仍待配置，不能写成全部功能完成。</p>
 </section>
 <section>
@@ -77,12 +77,12 @@ code{font-size:13px;background:#edf2fa;padding:2px 6px;border-radius:5px;overflo
 <p>Supabase正式Site URL为主站，允许主站与本地3010回调；邮箱确认保持开启。自定义SMTP尚未配置，因此公众新邮箱注册发信与真实收信验收仍未完成。管理员预确认临时测试账号只验证登录后的业务，不能代替注册发信测试。</p>
 <p>原ai-news环境配置仅检查变量名称，未发现邮件配置键；未输出变量值，也未改环境。默认Supabase邮件服务不能代替面向非团队邮箱的公众注册发信，仍需外部SMTP。<a href="https://supabase.com/docs/guides/auth/auth-smtp">Supabase官方说明</a>。已询问用户已有邮件服务名称，不索取密钥。</p>
 <p>Google一键登录已按用户决定暂缓。未启用provider或部署Google产品入口，初步成果保存在 <code>docs/deferred/google-login/</code>，活动邮箱callback已恢复原行为。</p>
-<p>Next保持15.5.27；PostCSS和sharp已做授权范围内的定向修复，正式云安装及构建成功。本轮云代码已完成普通fast-forward推送；后续新增测试固化与再次推送已获授权，尚不预填完成结果。</p>
+<p>Next保持15.5.27；PostCSS和sharp已做授权范围内的定向修复，正式云安装及构建成功。核心云代码、记账测试固化和品牌导航均已普通推送，最新产品代码提交249d621。</p>
 </section>
 <section>
 <h2>远端同步：普通fast-forward已成功</h2>
 <p>GitHub已接受普通fast-forward推送 <code>4c8843a → 25e0fda</code>。原两个提交保存在 <code>backup/local-pre-push-20261014</code>，没有force push，也没有绕过GitHub保护。</p>
-<p>此前GH013拦截的是脱敏测试fixture中的假PAT固定文本；gitleaks为0不等于平台格式扫描放行。主Agent改为运行时构造合成值，相关回归6/6通过后完成授权备份与整理。新增记账定位测试的固化及下一次推送已获授权，正在准备，不写成已推送。</p>
+<p>此前GH013拦截的是脱敏测试fixture中的假PAT固定文本；gitleaks为0不等于平台格式扫描放行。主Agent改为运行时构造合成值，相关回归6/6通过后完成授权备份与整理。记账定位测试ee48a04及品牌导航249d621也已正常推送，无force或保护绕过。</p>
 </section>
 <section>
 <h2>仍未完成</h2>

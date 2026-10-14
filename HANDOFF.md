@@ -2,8 +2,15 @@
 
 更新时间：2026-10-14（Asia/Shanghai）
 
+## 当前测试执行策略（用户最新指令，后续会话必须遵守）
+
+- 采用增量验证，禁止每次修改后自动运行全量套件。开发中优先受影响文件/组件/模块测试；纯UI样式或文案只做相关页面检查与必要回归。
+- 功能完成执行相关单元及必要集成；认证、数据库结构、公共接口等高风险扩大覆盖。全量测试、完整构建、完整E2E原则上安排里程碑/最终交付，提前运行须有高风险理由。
+- 已有失败先定位根因，不反复跑整套碰运气。安全检查、真实核心验证仍必需。每次交付准确报告已运行、未运行与残留风险；此规则覆盖旧Skill默认每改一处都全量验证的频率要求，不免除TDD先RED→GREEN。
+
 ## 正式部署与线上验收进行中（以下旧记录为历史，不代表当前状态）
 
+- 品牌导航正式已发布：用户授权普通push ee48a04→249d621成功；部署dpl_APQjF6nXZt8SCuKAWHz1yKWhnnb5 READY，146源文件，主站atoms-demo-jiaqi.vercel.app。发布后仅受影响brand-home-navigation.spec线上7/7通过（15.8s），无console/pageerror与>=400响应；名称/首页与登录注册/桌面1470+320/375/Click与Enter/生成期拦截均通过。UI合同样本不替代真实模型，UI版本未重复跑真实Agent全链路或全量E2E；上一正式核心Phase2和三应用分轮通过记录仍可参考，未改核心API/Auth/数据库。用户新版AGENTS.md整体替换旧指令并已包含增量策略，后续以新版为准，不覆盖其文件。恢复期单独交互/真实手机与大陆网络/SMTP邮箱确认仍待验收。
 - 用户新增品牌导航：首页及登录/注册可见品牌统一Atoms Demo；工作区compactlogo标准a href'/'支持Click/Enter返回真实首页、hover/focus提示、44px触控。生成或preview恢复中aria-disabled+preventDefault沿现有newProject门禁，避免误中断SSE；不clear存储、不删除项目/调用新generate。frontend-design保持原冷灰蓝布局，仅必要auto/nowrap/mobilelogo宽度。旧UI RED6cases+login1case，修改后root新build79757通过、production3010 session16464；品牌7+authnav4+workspace5 Playwright16/16通过，品牌所有case有0console/0>=400断言。root108/108unit、typecheck/build通过，桌面1470/手机320截图实际查看无品牌截断溢出，独立review Critical/Important0，恢复期单独test未覆盖属Minor。仅UI合同API/SSE fixture，不冒充真实模型/DB测试。正准备发布这两项UI，尚未上线新品牌；Agent/Auth/模型/env/lock未改。
 - 记账测试固化与结果报告已追加提交ee48a04并普通push成功25e0fda→ee48a04。原两commitbackup仍保留本地，Google暂缓文件仍untracked本地/部署排除，不删用户资料。
 - 最新：真实Expense复验63759完整passed1/failed0/skipped0/flaky0，temporaryUsers2/cleanupFailures0。录入/总额88.50/删除、iframe刷新及整页刷新数据保留、DB项目/最新version/messages/turns/files一致、console错误断言通过。三个代表case已分两轮全部取得通过结果（之前Task/Habit2pass+Expensefail，本次Expense1pass）；不伪称同一批3/3。expenseTotal仅测试定位器，优先testID，缺失时精确“总支出”标签parent，先strict标签拒重复并拒BODY/HTML/null避免读取其他区域金额。TDD两轮RED→GREEN，root fresh静态6/6+typecheck0，独立review Important1关闭。未改生产Agent/Prompt/模型策略或环境。
