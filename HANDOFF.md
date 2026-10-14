@@ -2,6 +2,23 @@
 
 更新时间：2026-10-14（Asia/Shanghai）
 
+## 最新授权：公开GitHub与云端SDK
+
+- 用户明确要求创建公开（不是private）ZhongJiaqi/atoms-demo仓库并推送main，允许新增@vercel/sandbox及锁文件更新。尚未批准生产部署；云端环境变量同步和新服务配置仍需确认。
+- 已安装固定@vercel/sandbox 3.8.0，仅新增41个传递依赖，原包未升级；npm报告3项既有风险（1moderate/2high），不运行audit fix --force。未改.env。
+- 公开历史审查：未跟踪env.local、generated-projects、trace或截图。gitleaks扫描6提交唯一命中findings.md:263；安全检查确认是ev_+64位SHA256调查证据ID，不是凭据。新增.gitleaksignore仅精确忽略该旧提交fingerprint，再扫0命中，禁止宽泛跳过整文件/规则。新增忽略.vercel目录，避免后续误提交平台本地配置。
+- 云端最小适配需短时VM构建/截图、私有持久产物、每次从DB恢复修改基线、跨实例项目租约、稳定独立项目preview Origin及签名授权。不能仅装SDK就宣称云端生成可用。
+- 安装后验证28单元、生产build/typecheck、完整Playwright26通过/5跳过/0失败（约1.1分钟）；5项仍缺专用邮箱测试账号。独立依赖审查无Critical/Important，文档过时Minor已更正。新增undici要求Node>=20.18.1，部署使用Node22或24；不在本轮自动改用户环境。
+- 当前本地服务执行会话11075，http://127.0.0.1:3010。公开仓库创建/推送正在执行，完成后记录remote及commit；生产云资源创建/配置仍等待确认。
+
+## 初始上线检查（授权结论已被上方公开仓库确认替代）
+
+- 用户要求先推进推送/部署，但上一条明确“推送、部署之前都要确认”仍保留；尚未创建远端仓库、push、Vercel项目或部署。
+- 2026-10-14只读CLI：GitHub已登录ZhongJiaqi，本项目git remote为空，gh repo view ZhongJiaqi/atoms-demo返回不存在/不可访问。Vercel whoami意外自动触发device登录，随后实际登录成功；用户名603820870-9757，团队jiaqis-projects-c666d1ab（Jiaqi's projects）。旧文档的Token失效/未登录结论已过时，不要重复要求GitHub重新登录。
+- 线上生成仍阻塞于本地macOS sandbox-exec、磁盘目录和进程内注册表；直接部署只能提供不完整体验。已完整读取deployment-patterns/vercel-cli/vercel-sandbox技能并核对官方Sandbox费用页；Hobby额度内免费，超额暂停，不自动升级付费。
+- 初始曾建议private仓库及请求SDK授权，随后用户明确改为公开仓库并批准SDK，以上方最新授权为准。生产部署和Atoms专用云环境同步仍须后续明确确认，禁止影响ai-news-radar。
+- 人读上线准备说明：docs/DEPLOYMENT_START.html。未修改env/lock，未实现远程adapter，不把文档当上线完成。
+
 ## 最新增量：首页需求示例与顶部吸附修复
 
 - 首页输入框下新增项目看板、个人记账、个人主页、习惯打卡四个示例。点击只填写完整需求并focus(preventScroll)，不自动发送；可继续编辑/切换，匹配原文本时显示选中态。44px触控按钮、flex-wrap适配窄屏。未增加赛马/附件等未实现入口。

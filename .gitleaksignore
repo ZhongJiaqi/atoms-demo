@@ -1,0 +1,2 @@
+# 调研工具生成的 ev_ + SHA256 证据标识，不是 API 密钥。仅忽略这一历史定位。
+b8443a247b640ab776240de2548b7a0e38f3292f:findings.md:generic-api-key:263
