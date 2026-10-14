@@ -9,6 +9,7 @@ type ModelConfig = {
 };
 
 const MAX_MODEL_OUTPUT_TOKENS = 8_000;
+const MAX_PATCH_OUTPUT_TOKENS = 16_000;
 const MAX_JSON_ATTEMPTS = 2;
 
 const PRODUCT_QUALITY = `<product_quality>
@@ -100,7 +101,7 @@ ${PRODUCT_QUALITY}
 7. 所有功能必须使用内存状态和浏览器标准能力实现；不要依赖远程图片、字体、接口或 CDN。
 8. 修改后必须继续满足此前全部用户需求，并保持响应式和至少一个真实交互。
 9. CSS 必须写在 src/styles.css 中，不使用 Tailwind。
-10. 保持补丁精炼，避免重复返回未变化代码，确保完整 JSON 能在输出限制内结束。
+10. 保持补丁精炼，只输出必要的变化文件；在 16000 token 输出预算内返回完整 JSON，不以删除已有功能或降低设计质量来缩短输出。
 </constraints>
 重要：只返回合法 JSON，files 是变化文件的完整内容，deletedFiles 必须是数组（没有删除时也返回 []）；不输出计划或分析，不重置已有用户数据。`;
 
@@ -152,6 +153,7 @@ async function requestJson<T>(
   temperature: number,
   parse: (text: string) => T,
   label: string,
+  maxOutputTokens = MAX_MODEL_OUTPUT_TOKENS,
 ) {
   const config = getModelConfig();
   const client = new OpenAI({ apiKey: config.apiKey, baseURL: config.baseURL });
@@ -167,7 +169,7 @@ async function requestJson<T>(
       messages: retryMessages,
       response_format: { type: "json_object" as const },
       ...(supportsTemperature ? { temperature } : {}),
-      max_tokens: MAX_MODEL_OUTPUT_TOKENS,
+      max_tokens: maxOutputTokens,
       ...(isDashScope && supportsThinkingToggle
         ? { enable_thinking: requiresThinking }
         : {}),
@@ -210,7 +212,7 @@ async function complete(messages: OpenAI.Chat.Completions.ChatCompletionMessageP
 }
 
 async function completePatch(messages: OpenAI.Chat.Completions.ChatCompletionMessageParam[]) {
-  const completed = await requestJson(messages, 0.2, parsePatch, "增量补丁");
+  const completed = await requestJson(messages, 0.2, parsePatch, "增量补丁", MAX_PATCH_OUTPUT_TOKENS);
   return { patch: completed.value, model: completed.model };
 }
 

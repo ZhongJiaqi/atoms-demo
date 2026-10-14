@@ -1,6 +1,7 @@
 import { expect, test, type Page } from "@playwright/test";
+import { redactProductionDiagnostic } from "../utils/redact-diagnostic";
 
-test.use({ actionTimeout: 30_000 });
+test.use({ actionTimeout: 30_000, trace: "off", screenshot: "off" });
 
 const REQUIRED_ENV = ["E2E_PRIMARY_EMAIL", "E2E_PRIMARY_PASSWORD", "E2E_OTHER_EMAIL", "E2E_OTHER_PASSWORD"] as const;
 const missingEnvironment = REQUIRED_ENV.filter((name) => !process.env[name]);
@@ -25,13 +26,35 @@ async function logout(page: Page) {
   }
 }
 
+async function waitForGeneration(page: Page, version: number) {
+  let outcome: false | { error?: string };
+  try {
+    const terminal = await page.waitForFunction(targetVersion => {
+      const latestTurn = Array.from(document.querySelectorAll(".conversation-turn")).at(-1);
+      const error = latestTurn?.querySelector<HTMLElement>(".chat-error");
+      if (error?.getClientRects().length) return { error: error.querySelector("p")?.textContent || error.textContent || "本轮生成失败" };
+      if (document.querySelector('[data-testid="generated-preview"]')?.getAttribute("data-version") === String(targetVersion)) return {};
+      return false;
+    }, version, { timeout: GENERATION_TIMEOUT });
+    outcome = await terminal.jsonValue();
+    await terminal.dispose();
+  } catch (error) {
+    if (!(error instanceof Error) || error.name !== "TimeoutError") throw error;
+    const status = await page.evaluate(() => ({
+      version: document.querySelector('[data-testid="generated-preview"]')?.getAttribute("data-version"),
+      turn: Array.from(document.querySelectorAll(".conversation-turn")).at(-1)?.getAttribute("data-status"),
+      saved: document.querySelector(".session-status")?.textContent,
+    })).catch(() => ({ status: "页面已关闭，无法读取状态" }));
+    throw new Error(`等待 v${version} 超过单轮6分钟：${redactProductionDiagnostic(JSON.stringify(status)).slice(0, 500)}`);
+  }
+  if (outcome && outcome.error) throw new Error(`v${version} 生成失败：${redactProductionDiagnostic(outcome.error).slice(0, 1000)}`);
+  await expect(page.locator(".session-status")).toContainText("已保存");
+}
+
 async function modify(page: Page, requirement: string, version: number) {
   await page.locator("#workspace-requirement").fill(requirement);
   await page.getByRole("button", { name: "发送修改需求" }).click();
-  await expect(page.getByTestId("generated-preview")).toHaveAttribute("data-version", String(version), {
-    timeout: GENERATION_TIMEOUT,
-  });
-  await expect(page.locator(".session-status")).toContainText("已保存");
+  await waitForGeneration(page, version);
 }
 
 test.describe("Phase 2 真实认证、持久化与恢复", () => {
@@ -47,7 +70,8 @@ test.describe("Phase 2 真实认证、持久化与恢复", () => {
     await expect(page.locator("body")).toContainText(/注册成功|正在恢复|把想法变成/);
   });
 
-  test("Todo 创建、两轮修改、刷新重登、Sandbox 恢复及跨账号隔离", async ({ page }) => {
+  test("Todo 创建、两轮修改、刷新重登、Sandbox 恢复及跨账号隔离", async ({ page }, testInfo) => {
+    test.setTimeout(20 * 60_000);
     const primaryEmail = process.env.E2E_PRIMARY_EMAIL!;
     const primaryPassword = process.env.E2E_PRIMARY_PASSWORD!;
     const otherEmail = process.env.E2E_OTHER_EMAIL!;
@@ -73,7 +97,7 @@ test.describe("Phase 2 真实认证、持久化与恢复", () => {
     );
     await page.getByRole("button", { name: /^开始/ }).click();
     const preview = page.getByTestId("generated-preview");
-    await expect(preview).toHaveAttribute("data-version", "1", { timeout: GENERATION_TIMEOUT });
+    await waitForGeneration(page, 1);
     const projectId = await preview.getAttribute("data-project-id");
     expect(projectId).toMatch(/^[0-9a-f-]{36}$/i);
     if (!projectId) throw new Error("缺少项目 ID");
@@ -115,6 +139,19 @@ test.describe("Phase 2 真实认证、持久化与恢复", () => {
     await modify(page, "增加任务优先级，支持高、中、低三级，并保留已有任务和深色模式", 3);
     await expect(page.getByTestId("generated-preview")).toHaveAttribute("data-project-id", projectId);
     await expect(page.locator(".conversation-turn")).toHaveCount(3);
+    frame = page.frameLocator('[data-testid="generated-preview"]');
+    await expect(frame.getByTestId("task-item").filter({ hasText: "验证数据库恢复" })).toBeVisible();
+    const controls = await frame.locator('input, select, button, [role="radio"], [role="radiogroup"], [role="group"]').evaluateAll(elements => elements.map(element => ({
+      tag: element.tagName,
+      role: element.getAttribute("role"),
+      type: element.getAttribute("type"),
+      testId: element.getAttribute("data-testid"),
+      label: element.getAttribute("aria-label"),
+      labels: element instanceof HTMLInputElement || element instanceof HTMLSelectElement ? Array.from(element.labels || []).map(label => label.textContent?.trim()) : undefined,
+      text: element.tagName === "BUTTON" ? element.textContent?.trim().slice(0, 100) : undefined,
+      options: element instanceof HTMLSelectElement ? Array.from(element.options).map(option => ({ value: option.value, label: option.textContent?.trim() })) : undefined,
+    })));
+    await testInfo.attach("v3-controls.json", { body: Buffer.from(JSON.stringify(controls, null, 2)), contentType: "application/json" });
 
     expect(consoleErrors, consoleErrors.join("\n")).toEqual([]);
     expect(failedResponses, failedResponses.join("\n")).toEqual([]);

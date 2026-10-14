@@ -11,6 +11,8 @@ import { GENERATED_ROOT } from "../../lib/agent/files";
 
 const execFile = promisify(execFileCallback);
 
+test.use({ trace: "off", screenshot: "off" });
+
 test("真实数据库历史回滚、iframe、刷新及恢复后继续修改同项目", async ({ page, browser }, testInfo) => {
   test.skip(process.env.E2E_REAL_MODEL !== "1", "最后一步需要真实模型修改，必须显式启用。");
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL!;
@@ -132,16 +134,23 @@ test("真实数据库历史回滚、iframe、刷新及恢复后继续修改同�
     await frame.getByRole("button", { name: "计数 0", exact: true }).click();
     await expect(frame.getByRole("button", { name: "计数 1", exact: true })).toBeVisible();
     await createProjectDraft(store, { projectId: randomUUID(), name: "更晚创建但尚未成功的草稿" });
-    await page.goto("/");
+    const automaticThumbnails: string[] = [];
+    const observeThumbnails = (request: { url(): string }) => {
+      if (/\/api\/projects\/[^/]+\/thumbnail(?:\?|$)/.test(request.url())) automaticThumbnails.push(request.url());
+    };
+    page.on("request", observeThumbnails);
+    await page.goto("/", { waitUntil: "networkidle" });
     const myProjects = page.getByRole("region", { name: "我的项目", exact: true });
     await expect(myProjects.locator(".home-project-card")).toHaveCount(1);
     await expect(myProjects.locator(".home-project-card p")).toHaveCount(0);
     await expect(myProjects.locator(`a[href="/?project=${projectId}"]`)).toHaveCount(1);
     await expect(myProjects.getByTestId("project-version")).toHaveCount(0);
     await expect(myProjects.getByRole("button", { name: "历史项目", exact: true })).toHaveCount(0);
-    const cover = myProjects.locator(`img[data-project-id="${projectId}"]`);
-    await expect(cover).toHaveAttribute("data-version", "4");
-    await expect.poll(() => cover.evaluate((el) => (el as HTMLImageElement).naturalWidth), { timeout: 60000 }).toBe(960);
+    // 已批准的统一封面由首页直接渲染；截图API仍单独验收真实PNG及鉴权。
+    await expect(myProjects.getByRole("img", { name: "统一项目封面", exact: true })).toHaveCount(1);
+    await expect(myProjects.locator(".home-project-card img")).toHaveCount(0);
+    expect(automaticThumbnails).toEqual([]);
+    page.off("request", observeThumbnails);
     const thumbnail = await page.request.get(`/api/projects/${projectId}/thumbnail?version=4`);
     expect(thumbnail.headers()["content-type"]).toContain("image/png");
     expect(thumbnail.headers()["x-project-version"]).toBe("4");
@@ -149,6 +158,11 @@ test("真实数据库历史回滚、iframe、刷新及恢复后继续修改同�
     const oldThumbnail = await page.request.get(`/api/projects/${projectId}/thumbnail?version=1`);
     expect(oldThumbnail.headers()["x-project-version"]).toBe("1");
     expect((await oldThumbnail.body()).equals(await thumbnail.body())).toBe(false);
+    // 显式由A的浏览器加载，保留下面退出A登录B时的同上下文私有缓存验收。
+    expect(await page.evaluate((url) => new Promise<string>((resolve) => {
+      const img = new Image(); img.onload = () => resolve("loaded"); img.onerror = () => resolve("failed");
+      img.src = url;
+    }), `/api/projects/${projectId}/thumbnail?version=4`)).toBe("loaded");
     expect((await readdir(GENERATED_ROOT)).filter((name) => name.startsWith(`thumbnail-${projectId}-`))).toEqual([]);
     await expect(page.getByRole("button", { name: "退出登录", exact: true })).toBeVisible();
     await page.screenshot({ path: testInfo.outputPath("home-projects.png"), fullPage: true });

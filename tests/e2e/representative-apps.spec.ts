@@ -1,9 +1,19 @@
-import { expect, test, type FrameLocator, type Page, type TestInfo } from "@playwright/test";
+import { expect, test, type FrameLocator, type Locator, type Page, type TestInfo } from "@playwright/test";
 import { expenseTotal } from "../utils/representative-locators";
 
-test.use({ actionTimeout: 30_000 });
+test.use({ actionTimeout: 30_000, trace: "off", screenshot: "off" });
 
 const GENERATION_TIMEOUT = 6 * 60 * 1000;
+
+async function deleteRecord(frame: FrameLocator, item: Locator) {
+  await item.getByRole("button", { name: /删除/ }).click();
+  const confirmation = frame.getByRole("dialog").or(frame.getByRole("alertdialog"));
+  await expect.poll(async () => (await item.count()) === 0 || await confirmation.isVisible()).toBe(true);
+  if (await confirmation.isVisible()) {
+    await confirmation.getByRole("button", { name: /确认|确定|^删除$/ }).click();
+  }
+  await expect(item).toHaveCount(0);
+}
 
 async function login(page: Page) {
   await page.goto("/login");
@@ -55,8 +65,7 @@ const appCases: AppCase[] = [
       await input.fill("临时任务");
       await add.click();
       const deleteItem = frame.getByTestId("task-item").filter({ hasText: "临时任务" });
-      await deleteItem.getByRole("button", { name: /删除/ }).click();
-      await expect(deleteItem).toHaveCount(0);
+      await deleteRecord(frame, deleteItem);
     },
     async verifyPersisted(frame) {
       const keepItem = frame.getByTestId("task-item").filter({ hasText: "准备产品演示" });
@@ -85,8 +94,7 @@ const appCases: AppCase[] = [
       await amount.fill("12");
       await add.click();
       const deleteItem = frame.getByTestId("expense-item").filter({ hasText: "临时支出" });
-      await deleteItem.getByRole("button", { name: /删除/ }).click();
-      await expect(deleteItem).toHaveCount(0);
+      await deleteRecord(frame, deleteItem);
     },
     async verifyPersisted(frame) {
       await expect(frame.getByTestId("expense-item").filter({ hasText: "团队午餐" })).toBeVisible();
@@ -121,8 +129,7 @@ const appCases: AppCase[] = [
       await input.fill("临时习惯");
       await add.click();
       const deleteItem = frame.getByTestId("habit-item").filter({ hasText: "临时习惯" });
-      await deleteItem.getByRole("button", { name: /删除/ }).click();
-      await expect(deleteItem).toHaveCount(0);
+      await deleteRecord(frame, deleteItem);
     },
     async verifyPersisted(frame) {
       await expect(frame.getByTestId("habit-item").filter({ hasText: "阅读 30 分钟" })).toBeVisible();
@@ -196,10 +203,12 @@ test.describe("真实模型生成应用的代表性端到端验收", () => {
   for (const appCase of appCases) {
     test(appCase.name, async ({ page }, testInfo) => {
       const consoleErrors: string[] = [];
+      const failedResponses: number[] = [];
       page.on("console", (message) => {
         if (message.type() === "error") consoleErrors.push(message.text());
       });
       page.on("pageerror", (error) => consoleErrors.push(error.message));
+      page.on("response", response => { if (response.status() >= 400) failedResponses.push(response.status()); });
 
       const { frame, project, projectId } = await generateAndVerifyCore(page, testInfo, appCase);
       await expect(frame.locator("body")).toBeVisible();
@@ -230,6 +239,7 @@ test.describe("真实模型生成应用的代表性端到端验收", () => {
         files: project.files,
       });
       expect(consoleErrors, `浏览器控制台错误：\n${consoleErrors.join("\n")}`).toEqual([]);
+      expect(failedResponses, "正常链路不得出现 HTTP 4xx/5xx").toEqual([]);
     });
   }
 });

@@ -7,22 +7,13 @@ import { createServerClient } from "@supabase/ssr";
 import { cleanupCloudFixture } from "../agent/test-utils/cloud-cleanup.ts";
 import { uploadArtifact } from "../../lib/cloud/artifacts.ts";
 import { withProjectLease, saveCloudProjectSnapshot } from "../../lib/cloud/project-lease.ts";
+import { redactProductionDiagnostic } from "./redact-diagnostic.ts";
+
+export { redactProductionDiagnostic };
 
 const REF = "jvnweimexkigooqvagfz";
 const ORIGIN = "https://atoms-demo-jiaqi.vercel.app";
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
-
-export function redactProductionDiagnostic(value) {
-  const text = String(value);
-  // Header dumps can be quoted, escaped or name/value arrays: omit the entire
-  // diagnostic rather than try to parse every serialization of authentication.
-  if (/\bcookies?\b|\bauthorization\b|auth-token|base64-/i.test(text)) return "[敏感认证请求详情已省略]";
-  return text
-    .replace(/\bBearer\s+[A-Za-z0-9._~+\/-]+=*/gi, "Bearer [REDACTED]")
-    .replace(/([?&](?:grant|token)=)[^\s&#]+/gi, "$1[REDACTED]")
-    .replace(/eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+/g, "[REDACTED]")
-    .replace(/sbp_(?:oauth_)?[a-f0-9]{40}/g, "[REDACTED]");
-}
 
 export function playwrightEnvironment(env, users) {
   const allowed = ["PATH", "HOME", "TMPDIR", "TMP", "TEMP", "LANG", "LC_ALL", "SYSTEMROOT", "DISPLAY", "XAUTHORITY", "HTTP_PROXY", "HTTPS_PROXY", "ALL_PROXY", "NO_PROXY", "http_proxy", "https_proxy", "all_proxy", "no_proxy", "NEXT_PUBLIC_SUPABASE_URL", "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY"];

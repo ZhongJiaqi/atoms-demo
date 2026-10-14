@@ -1,0 +1,127 @@
+import { expect, test } from "@playwright/test";
+
+test.use({ trace: "off", screenshot: "off", actionTimeout: 30_000 });
+test.skip(process.env.ATOMS_E2E_BASE_URL !== "https://atoms-demo-jiaqi.vercel.app" || process.env.E2E_REAL_MODEL !== "1", "只用于明确授权的正式站真实模型验收");
+
+test("正式站 DeepSeek 生成、修改、历史回滚、隔离及回滚后继续修改", async ({ page, browser }) => {
+  test.setTimeout(10 * 60_000);
+  const errors: string[] = [];
+  const badResponses: number[] = [];
+  page.on("pageerror", error => errors.push(error.message));
+  page.on("console", message => { if (message.type() === "error") errors.push(message.text()); });
+  page.on("response", response => { if (response.status() >= 400) badResponses.push(response.status()); });
+  await page.goto("/login");
+  await page.getByLabel("邮箱").fill(process.env.E2E_PRIMARY_EMAIL!);
+  await page.getByLabel("密码").fill(process.env.E2E_PRIMARY_PASSWORD!);
+  await page.getByRole("button", { name: "登录", exact: true }).last().click();
+  await page.waitForURL(url => !url.pathname.startsWith("/login"));
+  // Reuse the existing Phase 2 requirement; no new generation prompt.
+  await page.locator("#hero-requirement").fill("创建 Todo App，支持添加、完成和删除任务；使用 localStorage 保证刷新后任务不丢失。提供 data-testid：task-input、add-task、task-item。");
+  await page.getByRole("button", { name: /^开始/ }).click();
+  const preview = page.getByTestId("generated-preview");
+  await expect(preview).toHaveAttribute("data-version", "1", { timeout: 360_000 });
+  const projectId = await preview.getAttribute("data-project-id");
+  expect(projectId).toMatch(/^[0-9a-f-]{36}$/);
+  const frame = page.frameLocator('[data-testid="generated-preview"]');
+  await frame.getByTestId("task-input").fill("线上模型切换验收");
+  await frame.getByTestId("add-task").click();
+  const task = frame.getByTestId("task-item").filter({ hasText: "线上模型切换验收" });
+  await expect(task).toBeVisible();
+  await page.getByRole("button", { name: "刷新预览" }).click();
+  await expect(task).toBeVisible();
+  const firstResponse = await page.request.get(`/api/projects/${projectId}`);
+  expect(firstResponse.status()).toBe(200);
+  const firstVersion = await firstResponse.json();
+  expect(firstVersion.currentVersion).toBe(1);
+  await page.locator("#workspace-requirement").fill("增加深色模式，并保留已有功能和数据");
+  await page.getByRole("button", { name: "发送修改需求" }).click();
+  await expect(preview).toHaveAttribute("data-version", "2", { timeout: 360_000 });
+  await expect(preview).toHaveAttribute("data-project-id", projectId!);
+  await expect(task).toBeVisible();
+  await page.reload({ waitUntil: "networkidle" });
+  await expect(page.getByTestId("generated-preview")).toHaveAttribute("data-version", "2", { timeout: 60_000 });
+  await expect(task).toBeVisible();
+  const response = await page.request.get(`/api/projects/${projectId}`);
+  expect(response.ok()).toBe(true);
+  const project = await response.json();
+  expect(project.currentVersion).toBe(2);
+  expect(project.messages.map((message: { role: string }) => message.role)).toEqual(["user", "assistant", "user", "assistant"]);
+  expect(project.turns).toHaveLength(2);
+  for (const turn of project.turns) {
+    expect(turn.status).toBe("completed");
+    expect(turn.model).toBe("deepseek-v4.1-flash");
+    expect(turn.buildAttempts).toBeGreaterThanOrEqual(1);
+    expect(turn.events.some((event: { event: string }) => event.event === "model_completed")).toBe(true);
+  }
+  await page.getByRole("button", { name: "历史记录", exact: true }).click();
+  await page.getByRole("button", { name: "恢复到版本 v1", exact: true }).click();
+  await expect(preview).toHaveAttribute("data-version", "3", { timeout: 180_000 });
+  await expect(preview).toHaveAttribute("data-project-id", projectId!);
+  await expect(task).toBeVisible();
+  await frame.getByTestId("task-input").fill("回滚后真实交互");
+  await frame.getByTestId("add-task").click();
+  const restoredTask = frame.getByTestId("task-item").filter({ hasText: "回滚后真实交互" });
+  await expect(restoredTask).toBeVisible();
+  await page.getByRole("button", { name: "刷新预览" }).click();
+  await expect(restoredTask).toBeVisible();
+  await page.reload({ waitUntil: "networkidle" });
+  await expect(preview).toHaveAttribute("data-version", "3", { timeout: 60_000 });
+  await expect(task).toBeVisible();
+  await expect(restoredTask).toBeVisible();
+  const restoredResponse = await page.request.get(`/api/projects/${projectId}`);
+  expect(restoredResponse.status()).toBe(200);
+  const restored = await restoredResponse.json();
+  expect(restored.currentVersion).toBe(3);
+  expect(restored.files).toEqual(firstVersion.files);
+  expect(restored.turns.map((turn: { version: number }) => turn.version)).toEqual([1, 2, 3]);
+  expect(restored.turns.slice(0, 2)).toEqual(project.turns);
+  expect(restored.turns[2]).toMatchObject({ mode: "modify", requirement: "恢复到版本 v1", status: "completed", model: "历史版本恢复", version: 3 });
+  expect(restored.turns[2].events).toEqual(expect.arrayContaining([expect.objectContaining({ event: "complete", data: expect.objectContaining({ version: 3, restoredFrom: 1 }) })]));
+  expect(restored.turns[2].events.some((event: { event: string }) => event.event === "model_started" || event.event === "model_completed")).toBe(false);
+  const listResponse = await page.request.get("/api/projects");
+  expect(listResponse.status()).toBe(200);
+  const listed = (await listResponse.json()).projects.find((item: { id: string }) => item.id === projectId);
+  expect(listed.versions.map((version: { version: number }) => version.version)).toEqual([3, 2, 1]);
+
+  const otherContext = await browser.newContext();
+  try {
+    const otherPage = await otherContext.newPage();
+    otherPage.on("pageerror", error => errors.push(error.message));
+    otherPage.on("console", message => { if (message.type() === "error") errors.push(message.text()); });
+    otherPage.on("response", response => { if (response.status() >= 400) badResponses.push(response.status()); });
+    await otherPage.goto(`${new URL(page.url()).origin}/login`);
+    await otherPage.getByLabel("邮箱").fill(process.env.E2E_OTHER_EMAIL!);
+    await otherPage.getByLabel("密码").fill(process.env.E2E_OTHER_PASSWORD!);
+    await otherPage.getByRole("button", { name: "登录", exact: true }).last().click();
+    await otherPage.waitForURL(url => !url.pathname.startsWith("/login"));
+    // Only these two explicit API calls may return an ownership denial.
+    const deniedRead = await otherPage.request.get(`${new URL(page.url()).origin}/api/projects/${projectId}`);
+    expect([403, 404]).toContain(deniedRead.status());
+    const deniedRestore = await otherPage.request.post(`${new URL(page.url()).origin}/api/projects/${projectId}/restore`, { data: { version: 1, expectedVersion: 3 } });
+    expect([403, 404]).toContain(deniedRestore.status());
+    const otherProjects = await otherPage.request.get(`${new URL(page.url()).origin}/api/projects`);
+    expect(otherProjects.status()).toBe(200);
+    expect((await otherProjects.json()).projects.some((item: { id: string }) => item.id === projectId)).toBe(false);
+  } finally { await otherContext.close(); }
+
+  await page.reload({ waitUntil: "networkidle" });
+  await expect(preview).toHaveAttribute("data-version", "3", { timeout: 60_000 });
+  await expect(preview).toHaveAttribute("data-project-id", projectId!);
+  await page.locator("#workspace-requirement").fill("增加深色模式，并保留已有功能和数据");
+  await page.getByRole("button", { name: "发送修改需求" }).click();
+  await expect(preview).toHaveAttribute("data-version", "4", { timeout: 360_000 });
+  await expect(preview).toHaveAttribute("data-project-id", projectId!);
+  await expect(task).toBeVisible();
+  await expect(restoredTask).toBeVisible();
+  const continuedResponse = await page.request.get(`/api/projects/${projectId}`);
+  expect(continuedResponse.status()).toBe(200);
+  const continued = await continuedResponse.json();
+  expect(continued.currentVersion).toBe(4);
+  expect(continued.turns.map((turn: { version: number }) => turn.version)).toEqual([1, 2, 3, 4]);
+  expect(continued.turns.slice(0, 3)).toEqual(restored.turns);
+  expect(continued.turns[3]).toMatchObject({ status: "completed", model: "deepseek-v4.1-flash", version: 4 });
+  expect(continued.turns[3].events.some((event: { event: string }) => event.event === "model_completed")).toBe(true);
+  expect(continued.messages.map((message: { role: string }) => message.role)).toEqual(["user", "assistant", "user", "assistant", "user", "assistant", "user", "assistant"]);
+  expect(errors, errors.join("\n")).toEqual([]);
+  expect(badResponses).toEqual([]);
+});
