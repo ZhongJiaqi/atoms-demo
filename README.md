@@ -110,4 +110,4 @@ npx playwright install chromium
 
 ## 许可证
 
-本项目源码采用 [MIT License](LICENSE)，Copyright © 2026 ZhongJiaqi。第三方依赖、品牌及参考素材保留各自的许可证和权利；本项目与 Atoms 官方无隶属关系。
+本项目源码采用 [MIT License](LICENSE)，Copyright © 2026 ZhongJiaqi。
