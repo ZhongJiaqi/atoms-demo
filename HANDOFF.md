@@ -10,6 +10,8 @@
 
 ## 正式部署与线上验收进行中（以下旧记录为历史，不代表当前状态）
 
+- 2026-10-15用户反馈新日记/习惯生成大色块突兀，决定“设计Skill先后续计划，当前Prompt回滚上一个版本”。root仅恢复lib/agent/model.ts为27b839d^（即30073e2预算版）的完整文件，literal equality验证通过；恢复上一版视觉及原场景例子，8k/16k、JSON尝试/SDK/沙盒/DeepSeek/env/锁/DB不变，9相关unit fresh passed。README与docs/说明文档同步回撤，新增运行时设计Skill适配为P1计划（未实现，不安装Skill）；docs/FRONTEND_PROMPT_REPORT.html顶部记录回撤，将此前pass/deploy列为历史，不抹掉失败或把功能pass当审美合格。下一步review、指定文件commit/push、重新部署恢复正式站和零模型公开导航smoke；旧用户项目不会自动变样，不删除用户数据或额外真实生成消耗额度。当前线上尚为hf6w...新视觉版，不能提前声称线上回滚完成。
+
 - 最新发布收尾：11063正式记账定向验收exit0，1passed/0failed/0skipped/0flaky，temporaryUsers2/cleanupFailures0，真实模型/VM/DB/iframe统计删除双层持久化、正常console/pageerror/HTTP错误0。生产源码27b839d574d56f93fe24e7cae15b9e526df8a098+dpl_hf6wUdBFLQegMRSZavSkAhe4Wh5w，49709正式域名指向Ready。本轮未全量回归/新Prompt多轮组合/SMTP/线上编辑细项；编辑90金额及视觉细项为本地真实样本4case，不混淆。README/说明文档新增场景化设计引导及准确样本证据，HTML报告和本交接同步最终状态。随后只提交推送报告文档收尾，不重复部署纯文档；旧untracked资料不动。可回退dpl_GkZuNubc1djYgN7Zs9UaKc42uJmX，无env/锁/数据库变化。
 
 - go发布已执行：指定8文件commit/push27b839d574d56f93fe24e7cae15b9e526df8a098，远端回读一致、暂存diffcheck/gitleaks无泄漏；25992正式部署READY dpl_hf6wUdBFLQegMRSZavSkAhe4Wh5w（1jzk1u9ua），云完整build/type/routes通过，49709 inspect正式域名atoms-demo-jiaqi指向该新版本。生产仍DeepSeek，新视觉Prompt已生效，env/lock/DB不变。11063只跑正式记账representative一个真实模型生成/统计/删除/双层持久化，目前运行中，尚不能声称通过，结束必须核对cleanupFailures。仅README/说明文档等已授权文件进入Git；旧Google暂停与历史benchmark资料仍untracked，不删除。回退点dpl_GkZuNubc1djYgN7Zs9UaKc42uJmX。
