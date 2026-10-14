@@ -4,7 +4,7 @@
 
 在线体验：[https://atoms-demo-jiaqi.vercel.app/](https://atoms-demo-jiaqi.vercel.app/)
 
-本项目使用 Codex 开发。前期使用 **REA（reverse-engineer-anything）** 调研有权限访问的 Atoms 页面，提取首页、工作区及多轮交互规格；REA 用于开发调研，不是线上依赖，也不代表获取了原产品内部源码。
+本项目使用 Codex 开发。
 
 ## 项目能力
 
@@ -104,7 +104,7 @@ npx playwright install chromium
 - `lib/persistence/`、`supabase/migrations/`：项目存储、版本恢复和数据库迁移。
 - `sandbox-template/`：固定 React + Vite 模板；`tests/`：单元与端到端测试。
 
-[界面规格](docs/UI_SPEC.md) · [交互规格](docs/INTERACTION_SPEC.md)
+[项目说明与工程取舍](docs/说明文档.md) · [界面规格](docs/UI_SPEC.md) · [交互规格](docs/INTERACTION_SPEC.md)
 
 仓库不包含运行所需的真实密钥；本地环境文件、生成目录与测试产物不应提交到 Git。
 
