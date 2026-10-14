@@ -12,10 +12,10 @@
 - 新增 Enter 发送、Shift+Enter 换行与 IME 保护。动画仅轻位移/透明度与真实状态反馈，尊重 reduced-motion（包括滚动）。移除假附件/折叠/发布入口，分享发布按用户要求暂缓。
 - 最终验证：28/28单元、生产build/typecheck、12/12 Playwright通过（45.2秒）。真实DB/模型/沙盒、回滚、PNG版本区别、截图目录清理、同浏览器退出A并登录B后的图片404拒绝均通过；正常操作0非预期console error/4xx/5xx。无效登录400、未登录401、越权404、冲突409及网络阻断为明确预期测试。第一轮10 Playwright通过；随后同浏览器换账号测试发现退出303跳向0.0.0.0，曾10通过/1超时；已先复现303再改退出API为JSON结果，前端仅成功后跳首页、失败展示反馈，最终回归通过。
 - 复审修正：图片private,no-store避免跨账号浏览器缓存；服务器缓存32MiB上限按最旧PNG清理，临时文件rename原子写；浏览器上下文阻断所有WebSocket、禁WebRTC/ServiceWorker/背景网络，HTTP仅随机origin的GET。新增真实网络守卫测试和缓存单测先RED后GREEN。该浏览器层守卫不是OS网络隔离证明。320px按钮固定不收缩/不换行；恢复焦点trap生命周期只随面板打开，读取恢复状态ref，恢复中聚焦panel。
-- 运行依赖：新增接口复用本地已有 Playwright 开发依赖和已安装 Chromium；next.config.ts 外置 playwright。生产必须将playwright声明为直接运行依赖；已通过async问用户是否允许更新声明与锁文件，尚无明确回复，未擅改锁。部署线上时必须提供生产截图运行时/隔离 adapter，现阶段仍是本地 macOS 沙盒架构。截图浏览器暂未纳入 Vite RSS 监控，线上公开前需独立资源控制；不宣称部署完成。独立初审已完成，最终独立复核因代理额度限制失败，不能写最终独立review通过。
+- 运行依赖：2026-10-14 用户明确允许后，已把playwright 1.64.0声明为直接正式依赖；锁文件只新增根依赖、移除playwright/playwright-core的devOptional标记，无其他包版本变动。离线package-lock-only因无关可选包缓存缺失失败，随后用最小补丁更新；npm ci --omit=dev --ignore-scripts --dry-run --offline与npm ls --omit=dev均通过（仅模拟生产安装，不冒称全新环境实际安装）。生产build、28单元及相关4项浏览器回归通过，未改环境变量。next.config.ts外置playwright。线上仍必须提供Chromium运行时/隔离adapter，现阶段是本地macOS沙盒架构；截图浏览器暂未纳入Vite RSS监控，不宣称部署完成。独立初审已完成，最终独立复核因代理额度限制失败，不能写最终独立review通过。
 - 设计报告：docs/UI_POLISH.html（中文单文件HTML）。响应式测试使用 Chromium viewport 与有效 CSS viewport 模拟桌面缩放，不冒称真实手机或原生浏览器zoom/多浏览器已测试。
 - 本轮不改 .env/锁文件，不操作 ai-news-radar，不删除原用户数据。关键改动：app/page.tsx、app/globals.css、listUserProjects、thumbnail route/queue、next.config.ts、package.json test:unit、新增 responsive-design/project-thumbnail/thumbnail-queue 回归及扩充真实 rollback 用例。
-- 当前生产体验服务：http://127.0.0.1:3010（监听0.0.0.0:3010，执行会话75633）。测试结束已删除仅由本测试新建的两个临时账号及项目/目录/截图缓存；你的真实数据未动。浏览器网络trace含临时会话信息，勿公开上传。
+- 当前生产体验服务：http://127.0.0.1:3010（监听0.0.0.0:3010，执行会话89761）。测试结束已删除仅由本测试新建的两个临时账号及项目/目录/截图缓存；你的真实数据未动。浏览器网络trace含临时会话信息，勿公开上传。
 
 ## 当前结论
 
