@@ -2,6 +2,19 @@
 
 更新时间：2026-10-14（Asia/Shanghai）
 
+## 最新增量：并行首页介绍、工作区控件与预览自动恢复
+
+- 主Agent负责预览恢复和统一build/Playwright，workspace_controls_polish负责限定工作区组件，home_product_sections负责限定LandingPage；独立preview_workspace_review只读审查。不要同时启动多个Playwright命令或共享.next的dev/build。
+- 新增授权 GET /api/projects/[projectId]/preview-status，仅返回active/expiresAt/currentVersion，验证登录和项目RLS。useProjectPreview在进入、到期、每30秒可见检查、focus/visibilitychange自动检测；预览失效POST已有resume，保留projectId，失败提供真实错误与重试，不调用模型。
+- resume按同项目singleflight去重；先获得现有全局写锁再读取源码快照，读取/写文件/build全在锁内；Promise共享完整runtime响应。该锁仍是单实例内存锁，不是线上分布式锁。
+- 检测其他标签新版本时复用restoreWorkspace同步完整源码/对话/版本，而非无限要求手动刷新。恢复时暂停提交、回滚与新建入口。Agent写文件期间暂停检查，保持现有模型策略。
+- 工作区用统一SVG替换占位符号，复制回复使用真实剪贴板并反馈失败；版本记录真实入口，执行日志展示最近一轮事件，手机打开历史项目切回可见对话。移除无实际作用的下拉/假停止按钮。
+- 首页新增三段产品介绍在原需求框与我的项目之后，宽高充足桌面原生轻吸附分段，窄屏/短屏自然单列；reduced-motion关闭吸附/平滑滚动。插图明确示意，无虚构用户数/商业能力/分享发布。公开atoms.dev文本已参考；官网实际滚轮/动画因浏览器入口不可用未直接观察，设计不冒称已完整逆向。docs/HOME_PRODUCT_SECTIONS.html记录边界。
+- RED：工作区5项、预览原2项和首页3项正确失败；多标签同步新增断言先失败后修复。首次GREEN回归卡在iframe中文按钮，trace明确HTML测试响应未声明UTF-8导致乱码；只修正测试fixture的charset，随后通过。
+- 最终验证：28单元、build/typecheck通过，完整Playwright 24通过/5跳过/0失败（58.8秒）。跳过原始Phase2两项及代表应用三项，缺E2E_PRIMARY/OTHER专用邮箱测试账号；不能写全部29项通过。真实DB回滚用例先终止精确匹配本用例UUID目录的Vite，随后并发resume和浏览器focus自动恢复，确认同projectId/v2、单一新进程、iframe计数可操作且DB仍仅v1/v2；后续真实模型修改/回滚/刷新/跨账号隔离继续通过。独立静态初审两项Important均已修复并复核无剩余发现；不把静态审查当真实测试。恢复失败契约样本验证真实错误/可重试；按钮24px不足先RED，补44px后GREEN。该受控500是预期失败，正常监控操作无非预期console/network错误。桌面/375px首页和工作区截图已实际查看，无明显溢出或遮挡。
+- 当前最新生产体验服务：http://127.0.0.1:3010，执行会话49741。未改env/lock/模型，无数据库迁移，真实用户项目未动；测试只清理自己创建的账号/项目/目录。
+- 仍未完成：远程沙盒/线上部署/预览签名/分布式锁、原始邮件注册与三个代表性应用全套验收。别把本轮独立临时账户回滚测试当成所有旧用例通过。
+
 ## 最新增量：全宿主 UI 优化与首页项目封面
 
 - 2026-10-14 追加需求：首页卡片移除详细描述，仅保留应用主页封面、项目名称与最近更新时间。仅改首页JSX与其孤儿CSS，不改聊天/历史摘要或数据库。新增真实卡片无描述断言已先失败（存在1个描述段落）；修改后28单元、build/typecheck、12项Playwright全部通过（44.6秒），正常操作无非预期console/network错误。服务执行会话更新为7629。

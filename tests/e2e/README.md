@@ -56,3 +56,10 @@ HEADLESS=true E2E_REAL_MODEL=1 ATOMS_E2E_BASE_URL=http://127.0.0.1:3010 npm run 
 `responsive-design.spec.ts` 验证320–2560px、手机横竖屏与模拟80%/125%/200%桌面缩放后的有效CSS viewport；工作区部分使用明确的API契约样本，只证明UI交互，不是模型/数据库验收。覆盖Enter/Shift+Enter/IME、键盘图标提示、弹层focus/Escape、发送按钮位置、无横向溢出和reduced-motion。
 
 `project-thumbnail.spec.ts` 验证未登录拒绝及真实Chromium的HTTP/WebSocket/WebRTC通道守卫。对应缓存/排队边界由单元测试覆盖。请勿同时运行多个Playwright命令共用默认报告目录，避免trace被互相清理。
+
+## 2026-10-14 新增回归
+
+- `home-product-sections.spec.ts`：公开首页三段介绍位置、桌面分段尺寸、真实开始入口的焦点/草稿保留和无模型调用、窄屏/短屏/reduced-motion可达性。
+- `workspace-controls.spec.ts`：SVG可访问控件、真实剪贴板与拒绝反馈、真实宿主事件日志、手机历史项目入口、只读执行状态；API使用明确UI契约样本，不代替数据库验收。
+- `preview-recovery.spec.ts`：授权状态接口、失效自动恢复/焦点去重/恢复期间不发送新任务、多标签最新版本同步及失败重试；除授权接口外使用UI契约样本。
+- `version-rollback.spec.ts`增加真实Vite进程终止、并发恢复、同projectId/版本/源码及可交互iframe验证。只终止精确匹配本用例新UUID目录的node进程；不删除真实用户数据，不新增生产测试端点。

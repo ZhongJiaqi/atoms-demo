@@ -27,6 +27,7 @@ test("手机登录入口可达、触控目标充分且首页和认证页不横�
 
 test("工作区在窄屏及缩放下保留历史入口、预览代码和键盘弹层操作", async ({ page }, testInfo) => {
   const projectId = "123e4567-e89b-42d3-a456-426614174000";
+  await page.route(`**/api/projects/${projectId}/preview-status`, (route) => route.fulfill({ json: { active: true, expiresAt: Date.now() + 900000, currentVersion: 1 } }));
   const errors: string[] = []; const failures: number[] = [];
   page.on("pageerror", (error) => errors.push(error.message));
   page.on("console", (message) => { if (message.type() === "error") errors.push(message.text()); });

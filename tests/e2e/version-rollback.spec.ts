@@ -61,6 +61,38 @@ test("真实数据库历史回滚、iframe、刷新及恢复后继续修改同�
     const preview = page.getByTestId("generated-preview");
     await expect(preview).toHaveAttribute("data-version", "2");
     await expect(page.frameLocator('[data-testid="generated-preview"]').getByTestId("version-marker")).toHaveText("深色版");
+    // 只终止本用例 UUID 目录下的 Vite；验证真实进程消失后无需刷新工作区即可恢复。
+    const statusUrl = `/api/projects/${projectId}/preview-status`;
+    const beforeRecovery = await page.request.get(statusUrl);
+    expect(beforeRecovery.status()).toBe(200);
+    expect(await beforeRecovery.json()).toMatchObject({ active: true, currentVersion: 2 });
+    const previewPids = async () => {
+      const { stdout: processes } = await execFile("lsof", ["-nP", "-a", "-c", "node", "-d", "cwd", "-Fpn"]);
+      let pid = 0;
+      const matches: number[] = [];
+      for (const line of processes.split("\n")) {
+        if (line.startsWith("p")) pid = Number(line.slice(1));
+        if (line === `n${join(GENERATED_ROOT, projectId)}` && pid > 1 && pid !== process.pid) matches.push(pid);
+      }
+      return matches;
+    };
+    const oldPids = await previewPids();
+    expect(oldPids).toHaveLength(1);
+    process.kill(oldPids[0], "SIGTERM");
+    await expect.poll(async () => (await (await page.request.get(statusUrl)).json()).active).toBe(false);
+    const resumedResponses = Promise.all([page.request.post(`/api/projects/${projectId}/resume`), page.request.post(`/api/projects/${projectId}/resume`)]);
+    await page.evaluate(() => window.dispatchEvent(new Event("focus")));
+    const joined = await resumedResponses;
+    expect(joined.map((response) => response.status())).toEqual([200, 200]);
+    const joinedData = await Promise.all(joined.map((response) => response.json()));
+    expect(joinedData.map((data) => data.currentVersion)).toEqual([2, 2]);
+    expect(joinedData[0].expiresAt).toBe(joinedData[1].expiresAt);
+    await expect(page.frameLocator('[data-testid="generated-preview"]').getByTestId("version-marker")).toHaveText("深色版", { timeout: 60000 });
+    await page.frameLocator('[data-testid="generated-preview"]').getByRole("button", { name: "计数 0", exact: true }).click();
+    await expect(page.frameLocator('[data-testid="generated-preview"]').getByRole("button", { name: "计数 1", exact: true })).toBeVisible();
+    await expect.poll(previewPids).not.toEqual(oldPids);
+    expect(await previewPids()).toHaveLength(1);
+    expect((await user.from("project_versions").select("version").eq("project_id", projectId).order("version")).data?.map((item) => item.version)).toEqual([1, 2]);
     const firstCover = await page.request.get(`/api/projects/${projectId}/thumbnail?version=2`);
     expect(firstCover.headers()["cache-control"]).toContain("no-store");
     await page.getByRole("button", { name: "历史记录", exact: true }).click();

@@ -14,6 +14,13 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 export const maxDuration = 120;
 
+declare global {
+  // eslint-disable-next-line no-var
+  var __atomsResumeJobs: Map<string, Promise<ReturnType<typeof persistedBundleToRuntime>>> | undefined;
+}
+const resumeJobs = globalThis.__atomsResumeJobs ?? new Map<string, Promise<ReturnType<typeof persistedBundleToRuntime>>>();
+globalThis.__atomsResumeJobs = resumeJobs;
+
 type RouteContext = { params: Promise<{ projectId: string }> };
 
 function originOf(request: Request) {
@@ -28,17 +35,29 @@ export async function POST(request: Request, context: RouteContext) {
   try {
     await requireAuthenticatedUser(store);
     await requireProjectAccess(store, projectId);
-    const runtime = persistedBundleToRuntime(await loadPersistedProject(store, projectId));
-    if (runtime.state.currentVersion < 1) throw new Error("项目尚无可恢复的成功版本。");
-
-    const activePreview = getPreview(projectId);
-    const activeState = activePreview ? await loadProjectState(activePreview.projectDir).catch(() => null) : null;
-    if (!activePreview || activeState?.currentVersion !== runtime.state.currentVersion) {
-      const projectDir = await hydrateProjectDirectory(runtime.state, runtime.project);
-      const build = await buildProject(projectDir);
-      if (!build.success) throw new Error(`持久化源码重新构建失败：${build.stderr || build.stdout}`.slice(-4_000));
-      await startPreview(projectId, projectDir);
+    let job = resumeJobs.get(projectId);
+    if (!job) {
+      if (globalThis.__atomsGenerationActive) return Response.json({ error: "正在构建其他任务，请稍后重试预览。" }, { status: 409, headers: { "Cache-Control": "no-store" } });
+      globalThis.__atomsGenerationActive = true;
+      job = (async () => {
+        try {
+          // 快照读取和源码写入共同受现有 Agent 写锁保护，不能先读旧版再等锁。
+          const runtime = persistedBundleToRuntime(await loadPersistedProject(store, projectId));
+          if (runtime.state.currentVersion < 1) throw new Error("项目尚无可恢复的成功版本。");
+          const activePreview = getPreview(projectId);
+          const activeState = activePreview ? await loadProjectState(activePreview.projectDir).catch(() => null) : null;
+          if (!activePreview || activeState?.currentVersion !== runtime.state.currentVersion) {
+            const projectDir = await hydrateProjectDirectory(runtime.state, runtime.project);
+            const build = await buildProject(projectDir);
+            if (!build.success) throw new Error(`持久化源码重新构建失败：${build.stderr || build.stdout}`.slice(-4_000));
+            await startPreview(projectId, projectDir);
+          }
+          return runtime;
+        } finally { globalThis.__atomsGenerationActive = false; resumeJobs.delete(projectId); }
+      })();
+      resumeJobs.set(projectId, job);
     }
+    const runtime = await job;
 
     return Response.json(
       {
@@ -50,6 +69,7 @@ export async function POST(request: Request, context: RouteContext) {
         turns: runtime.state.turns,
         files: runtime.project.files,
         previewUrl: previewUrl(originOf(request), projectId, runtime.state.currentVersion),
+        expiresAt: getPreview(projectId)?.expiresAt ?? null,
       },
       { headers: { "Cache-Control": "no-store" } },
     );

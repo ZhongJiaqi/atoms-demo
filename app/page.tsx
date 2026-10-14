@@ -2,6 +2,8 @@
 
 import { FormEvent, type KeyboardEvent as ReactKeyboardEvent, useEffect, useMemo, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { useProjectPreview } from "@/lib/preview/use-project-preview";
+import { WorkspaceIcon } from "@/app/components/workspace-icon";
 
 type TimelineItem = {
   id: number;
@@ -128,6 +130,53 @@ function ProjectCover({ project }: { project: ProjectSummary }) {
   </div>;
 }
 
+function HomeProductSections() {
+  return <div className="home-product-sections">
+    <section className="home-product-section" aria-labelledby="home-product-build">
+      <div className="home-product-copy">
+        <span className="home-product-eyebrow">01 / 从描述到预览</span>
+        <h2 id="home-product-build">把需求变成<br />能操作的应用</h2>
+        <p>用自己的话描述想法。Atoms 编写真实源码，运行构建检查，再把应用放进浏览器预览。</p>
+        <span className="home-product-note">过程可见，结果可以亲手试。</span>
+      </div>
+      <figure className="home-product-visual home-product-build">
+        <div className="home-product-prompt"><span>你的想法</span><p>做一个能标记完成的待办应用</p></div>
+        <div className="home-product-pipeline"><span>编写源码</span><i aria-hidden="true">→</i><span>构建检查</span><i aria-hidden="true">→</i><span>打开预览</span></div>
+        <div className="home-product-app"><div className="home-product-window"><i /><i /><i /><span>应用预览</span></div><div className="home-product-example"><strong>今日待办</strong><span><i /> 整理本周计划</span><span><i /> 记录新的想法</span></div></div>
+        <figcaption>流程示意 · 非生成结果截图</figcaption>
+      </figure>
+    </section>
+    <section className="home-product-section home-product-reverse" aria-labelledby="home-product-iterate">
+      <div className="home-product-copy">
+        <span className="home-product-eyebrow">02 / 持续打磨</span>
+        <h2 id="home-product-iterate">一次开始，<br />接着往前做</h2>
+        <p>在同一个项目里继续对话，补充功能、调整界面。每次成功修改都会保存为新版本。</p>
+        <span className="home-product-note">想找回旧版？恢复后保存为新版本，原历史仍在。</span>
+      </div>
+      <figure className="home-product-visual home-product-versions">
+        <div className="home-product-version"><span>v1</span><div><strong>创建第一版</strong><small>从想法开始</small></div></div>
+        <div className="home-product-version"><span>v2</span><div><strong>继续修改</strong><small>给待办增加优先级</small></div></div>
+        <div className="home-product-version home-product-current"><span>v3</span><div><strong>恢复 v1，成为新版本</strong><small>v1 与 v2 仍保留在历史中</small></div></div>
+        <figcaption>版本流程示意 · 非真实项目记录</figcaption>
+      </figure>
+    </section>
+    <section className="home-product-section" aria-labelledby="home-product-return">
+      <div className="home-product-copy">
+        <span className="home-product-eyebrow">03 / 随时回来</span>
+        <h2 id="home-product-return">下次回来，<br />接着做</h2>
+        <p>登录后，从“我的项目”打开已有应用。读取保存的源码与对话，继续上次的工作。</p>
+        <a className="home-product-cta" href="#hero-requirement" onClick={() => document.getElementById("hero-requirement")?.focus({ preventScroll: true })}>从一个想法开始 <span aria-hidden="true">↑</span></a>
+      </div>
+      <figure className="home-product-visual home-product-library">
+        <div className="home-product-library-header"><span aria-hidden="true">◎</span><strong>你的账户 / 我的项目</strong></div>
+        <div className="home-product-saved"><span aria-hidden="true">▤</span><div><strong>已保存的应用</strong><small>源码 · 对话 · 版本</small></div><span aria-hidden="true">↗</span></div>
+        <div className="home-product-return-line"><span>打开项目</span><span aria-hidden="true">→</span><span>继续对话</span></div>
+        <figcaption>项目恢复示意 · 非真实账户数据</figcaption>
+      </figure>
+    </section>
+  </div>;
+}
+
 function LandingPage({
   requirement,
   setRequirement,
@@ -195,11 +244,21 @@ function LandingPage({
           ) : <p className="home-projects-empty">{signedIn ? "还没有项目，描述你的想法开始创建。" : "登录后，你的项目会出现在这里。"}</p>}
         </section>
       </section>
+      <HomeProductSections />
     </main>
   );
 }
 
 function AgentTrace({ turn, restoreVersion, restoreDisabled }: { turn: ConversationTurn; restoreVersion: (version: number) => void; restoreDisabled: boolean }) {
+  const [copyFeedback, setCopyFeedback] = useState("");
+  async function copyReply() {
+    try {
+      await navigator.clipboard.writeText(turn.result!.summary);
+      setCopyFeedback("已复制回复");
+    } catch {
+      setCopyFeedback("复制失败，请选择回复文字手动复制");
+    }
+  }
   return (
     <div className="agent-response">
       <header className="agent-identity">
@@ -238,9 +297,9 @@ function AgentTrace({ turn, restoreVersion, restoreDisabled }: { turn: Conversat
           <p className="agent-summary">{turn.result.summary}</p>
           <article className="version-card">
             <div><strong>版本 {turn.result.version}</strong><span>{turn.result.summary}</span></div>
-            <button aria-label={`恢复到版本 ${turn.result.version}`} disabled={restoreDisabled} onClick={() => restoreVersion(turn.result!.version)} title="查看版本历史并恢复" type="button">⌁</button>
+            <button aria-label="查看版本记录" data-tooltip="查看版本记录" disabled={restoreDisabled} onClick={() => restoreVersion(turn.result!.version)} type="button"><WorkspaceIcon name="history" /></button>
           </article>
-          <div className="message-actions" aria-label="消息操作"><span>▢</span><span>♧</span><span>♤</span><span>···</span></div>
+          <div className="message-actions" aria-label="消息操作"><button aria-label="复制回复" data-tooltip="复制回复" onClick={() => void copyReply()} type="button"><WorkspaceIcon name="copy" /></button><span role="status">{copyFeedback}</span></div>
         </>
       ) : null}
       {turn.error ? (
@@ -262,7 +321,6 @@ export default function CodingAgentPage() {
   const [mobilePane, setMobilePane] = useState<MobilePane>("chat");
   const [sourceFiles, setSourceFiles] = useState<SourceFile[]>([]);
   const [activeFile, setActiveFile] = useState("src/App.tsx");
-  const [refreshKey, setRefreshKey] = useState(0);
   const [consoleOpen, setConsoleOpen] = useState(false);
   const [notice, setNotice] = useState("");
   const [restoring, setRestoring] = useState(false);
@@ -288,6 +346,10 @@ export default function CodingAgentPage() {
   const previewIsCrossOrigin = result && typeof window !== "undefined"
     ? new URL(result.previewUrl).origin !== window.location.origin
     : false;
+  const preview = useProjectPreview({ projectId: result?.projectId, version: result?.version, paused: running || restoringVersion !== null,
+    onResumed: (url) => setResult((current) => current && current.projectId === result?.projectId && current.version === result.version ? { ...current, previewUrl: url } : current),
+    onVersionChanged: restoreWorkspace,
+  });
 
   useEffect(() => {
     void (async () => {
@@ -471,7 +533,7 @@ export default function CodingAgentPage() {
   }
 
   async function restoreVersion(version: number) {
-    if (!result || running || restoringVersion !== null || version === result.version) return;
+    if (!result || running || restoringVersion !== null || preview.status === "restoring" || version === result.version) return;
     setRestoringVersion(version);
     setVersionHistoryError("");
     setSaveStatus("saving");
@@ -483,7 +545,6 @@ export default function CodingAgentPage() {
       const data = await response.json() as { error?: string };
       if (!response.ok) throw new Error(data.error || "历史版本恢复失败。");
       if (!await restoreWorkspace(result.projectId)) throw new Error("版本已保存，但工作区加载失败，请刷新后重试。");
-      setRefreshKey((key) => key + 1);
       setVersionHistoryOpen(false);
       setNotice(`已恢复到 v${version} 的代码，原有历史已保留`);
     } catch (error) {
@@ -494,7 +555,7 @@ export default function CodingAgentPage() {
 
   async function submitPrompt(prompt: string) {
     const minimumLength = result ? MIN_MODIFY_PROMPT_LENGTH : MIN_CREATE_PROMPT_LENGTH;
-    if (prompt.length < minimumLength || running || restoringVersion !== null) return;
+    if (prompt.length < minimumLength || running || restoringVersion !== null || preview.status === "restoring") return;
     const localTurnId = crypto.randomUUID();
     const activeProjectId = result?.projectId;
     setTurns((current) => [
@@ -622,24 +683,24 @@ export default function CodingAgentPage() {
       <aside className="global-rail" aria-label="全局导航">
         <Logo compact />
         <div className="rail-actions">
-          <button aria-label="新建项目" data-tooltip="新建项目" disabled={running} onClick={startNewProject} type="button">＋</button>
-          <button aria-label="历史项目" data-tooltip="我的项目" onClick={() => void loadProjectHistory()} type="button">◇</button>
-          <button aria-label="项目文件" data-tooltip="查看源码" onClick={() => { setViewerMode("code"); setMobilePane("viewer"); }} type="button">▱</button>
-          <button aria-label="历史记录" className="mobile-history-button" data-tooltip="历史版本" onClick={() => void loadVersionHistory()} type="button">↶</button>
+          <button aria-label="新建项目" data-tooltip="新建项目" disabled={running || preview.status === "restoring"} onClick={startNewProject} type="button"><WorkspaceIcon name="plus" /></button>
+          <button aria-label="历史项目" data-tooltip="我的项目" onClick={() => { setMobilePane("chat"); void loadProjectHistory(); }} type="button"><WorkspaceIcon name="projects" /></button>
+          <button aria-label="项目文件" data-tooltip="查看源码" onClick={() => { setViewerMode("code"); setMobilePane("viewer"); }} type="button"><WorkspaceIcon name="code" /></button>
+          <button aria-label="历史记录" className="mobile-history-button" data-tooltip="历史版本" onClick={() => void loadVersionHistory()} type="button"><WorkspaceIcon name="history" /></button>
         </div>
         <span className="rail-spacer" />
-        <button aria-label="退出登录" data-tooltip="退出登录" className="account-button" onClick={() => void logout()} type="button">◉</button>
+        <button aria-label="退出登录" data-tooltip="退出登录" className="account-button" onClick={() => void logout()} type="button"><WorkspaceIcon name="logout" /></button>
       </aside>
 
       <header className="chat-header">
-        <div><strong>{result?.projectName || "正在创建项目"}</strong><span>⌄</span></div>
-        <div className="chat-header-actions"><button aria-label="历史记录" data-tooltip="历史版本" onClick={() => void loadVersionHistory()} type="button">↶</button></div>
+        <div><strong>{result?.projectName || "正在创建项目"}</strong></div>
+        <div className="chat-header-actions"><button aria-label="历史记录" data-tooltip="历史版本" onClick={() => void loadVersionHistory()} type="button"><WorkspaceIcon name="history" /></button></div>
       </header>
 
       <header className="viewer-header">
         <div className="viewer-mode-tabs" role="tablist" aria-label="查看模式">
-          <button aria-selected={viewerMode === "preview"} onClick={() => setViewerMode("preview")} role="tab" type="button">▣ 预览</button>
-          <button aria-selected={viewerMode === "code"} onClick={() => setViewerMode("code")} role="tab" type="button">‹/› 代码</button>
+          <button aria-selected={viewerMode === "preview"} onClick={() => setViewerMode("preview")} role="tab" type="button"><WorkspaceIcon name="monitor" />预览</button>
+          <button aria-selected={viewerMode === "code"} onClick={() => setViewerMode("code")} role="tab" type="button"><WorkspaceIcon name="code" />代码</button>
         </div>
         <div className="workspace-actions">
           <span className="workspace-save-label">{running ? "正在执行" : "安全预览"}</span>
@@ -653,7 +714,7 @@ export default function CodingAgentPage() {
           {turns.map((turn, turnIndex) => (
             <article className="conversation-turn" data-status={turn.status} key={turn.id}>
               <div className="user-bubble"><small>你 · 第 {turnIndex + 1} 轮</small><p>{turn.requirement}</p></div>
-              <AgentTrace turn={turn} restoreDisabled={running || restoringVersion !== null} restoreVersion={() => void loadVersionHistory()} />
+              <AgentTrace turn={turn} restoreDisabled={running || restoringVersion !== null || preview.status === "restoring"} restoreVersion={() => void loadVersionHistory()} />
             </article>
           ))}
           <div ref={chatEndRef} />
@@ -674,9 +735,9 @@ export default function CodingAgentPage() {
             <span className="composer-mark" aria-hidden="true">✦</span>
             <span>{result ? `v${result.version} · ${result.projectId.slice(0, 8)}` : "真实模型与沙盒构建"}</span>
             {running ? (
-              <button aria-label="任务运行中" className="stop-button" onClick={() => setNotice("任务正在受控沙盒中执行，请等待本轮结算")} type="button">■</button>
+              <span className="execution-state" role="status"><i />正在执行</span>
             ) : (
-              <button aria-label="发送修改需求" data-tooltip="发送 · Enter" className="send-button" disabled={restoringVersion !== null || requirement.trim().length < MIN_MODIFY_PROMPT_LENGTH} type="submit">↑</button>
+              <button aria-label="发送修改需求" data-tooltip="发送 · Enter" className="send-button" disabled={restoringVersion !== null || preview.status === "restoring" || requirement.trim().length < MIN_MODIFY_PROMPT_LENGTH} type="submit"><WorkspaceIcon name="arrow-up" /></button>
             )}
           </div>
         </form>
@@ -686,22 +747,26 @@ export default function CodingAgentPage() {
         <div className="app-viewer-shell">
           <div className="app-viewer-toolbar">
             <div className="device-controls">
-              <button aria-label="桌面预览" data-tooltip="桌面尺寸" className={previewDevice === "desktop" ? "is-active" : ""} onClick={() => setPreviewDevice("desktop")} type="button">▱</button>
-              <button aria-label="手机预览" data-tooltip="手机尺寸" className={previewDevice === "mobile" ? "is-active" : ""} onClick={() => setPreviewDevice("mobile")} type="button">▯</button>
+              <button aria-label="桌面预览" data-tooltip="桌面尺寸" className={previewDevice === "desktop" ? "is-active" : ""} onClick={() => setPreviewDevice("desktop")} type="button"><WorkspaceIcon name="monitor" /></button>
+              <button aria-label="手机预览" data-tooltip="手机尺寸" className={previewDevice === "mobile" ? "is-active" : ""} onClick={() => setPreviewDevice("mobile")} type="button"><WorkspaceIcon name="phone" /></button>
             </div>
-            <button aria-label="刷新预览" data-tooltip="刷新预览" onClick={() => setRefreshKey((value) => value + 1)} type="button">↻</button>
-            <div className="route-select"><span>⌂</span><b>Home</b><i>⌄</i></div>
-            {result ? <a aria-label="在新标签页打开" data-tooltip="独立打开预览" href={result.previewUrl} rel="noreferrer" target="_blank">↗</a> : <span />}
-            <button className={consoleOpen ? "is-active" : ""} onClick={() => setConsoleOpen((value) => !value)} type="button">‹› 控制台</button>
+            <button aria-label="刷新预览" data-tooltip="刷新预览" disabled={preview.status === "restoring"} onClick={() => void preview.refresh(true)} type="button"><WorkspaceIcon name="refresh" /></button>
+            <div className="route-select"><b>应用预览</b></div>
+            {result ? <a aria-label="在新标签页打开" data-tooltip="独立打开预览" href={result.previewUrl} rel="noreferrer" target="_blank"><WorkspaceIcon name="external" /></a> : <span />}
+            <button aria-expanded={consoleOpen} className={consoleOpen ? "is-active" : ""} onClick={() => setConsoleOpen((value) => !value)} type="button"><WorkspaceIcon name="terminal" />执行日志</button>
           </div>
 
           {viewerMode === "preview" ? (
             <div className={`preview-canvas is-${previewDevice}`}>
-              {result ? (
+              {result && preview.status === "error" ? (
+                <div className="viewer-empty is-error"><h2>预览暂时不可用</h2><p>{preview.error}</p><button className="primary-button preview-retry-button" onClick={() => void preview.refresh(true)} type="button">重试预览</button></div>
+              ) : result && !running && preview.status !== "ready" ? (
+                <div className="viewer-building" role="status"><div className="building-orbit"><i /><i /><i /></div><h2>正在恢复预览</h2><p>从已保存的项目代码启动预览，不创建新项目。</p></div>
+              ) : result ? (
                 <div className="preview-frame-wrap">
                   {running ? <div className="pending-preview"><i />正在构建新版本，当前展示 v{result.version}</div> : null}
                   <iframe
-                    key={`${result.previewUrl}-v${result.version}-${refreshKey}`}
+                    key={`${result.previewUrl}-v${result.version}-${preview.refreshKey}`}
                     data-project-id={result.projectId}
                     data-testid="generated-preview"
                     data-version={result.version}
@@ -733,17 +798,17 @@ export default function CodingAgentPage() {
 
           {consoleOpen ? (
             <div className="console-drawer">
-              <header><strong>控制台</strong><button aria-label="关闭控制台" onClick={() => setConsoleOpen(false)} type="button">×</button></header>
-              <p><i />{latestTurn?.status === "failed" ? "最近一次任务失败，已恢复上一稳定版本。" : result ? `v${result.version} 构建通过，预览进程运行中。` : "等待首个构建结果。"}</p>
+              <header><strong>执行日志</strong><button aria-label="关闭执行日志" onClick={() => setConsoleOpen(false)} type="button"><WorkspaceIcon name="close" /></button></header>
+              <div className="execution-log">{latestTurn?.timeline.length ? latestTurn.timeline.map((item) => <div className={`execution-log-row ${item.event === "error" || item.event.includes("failed") ? "is-error" : ""}`} key={item.id}><strong>{EVENT_LABELS[item.event] || item.event}</strong><p>{String(item.data.message || (item.event === "complete" ? item.data.summary : "") || "状态已更新")}</p></div>) : <p>等待本轮执行事件…</p>}</div>
             </div>
           ) : null}
         </div>
       </section>
 
       <nav className="mobile-workspace-nav" aria-label="工作区视图">
-        <button className={mobilePane === "chat" ? "is-active" : ""} onClick={() => setMobilePane("chat")} type="button">对话</button>
-        <button className={mobilePane === "viewer" && viewerMode === "preview" ? "is-active" : ""} onClick={() => { setMobilePane("viewer"); setViewerMode("preview"); }} type="button">预览</button>
-        <button className={mobilePane === "viewer" && viewerMode === "code" ? "is-active" : ""} onClick={() => { setMobilePane("viewer"); setViewerMode("code"); }} type="button">代码</button>
+        <button className={mobilePane === "chat" ? "is-active" : ""} onClick={() => setMobilePane("chat")} type="button"><WorkspaceIcon name="terminal" />对话</button>
+        <button className={mobilePane === "viewer" && viewerMode === "preview" ? "is-active" : ""} onClick={() => { setMobilePane("viewer"); setViewerMode("preview"); }} type="button"><WorkspaceIcon name="monitor" />预览</button>
+        <button className={mobilePane === "viewer" && viewerMode === "code" ? "is-active" : ""} onClick={() => { setMobilePane("viewer"); setViewerMode("code"); }} type="button"><WorkspaceIcon name="code" />代码</button>
       </nav>
 
       {versionHistoryOpen ? (
@@ -755,7 +820,7 @@ export default function CodingAgentPage() {
               {versionHistoryLoading ? <p role="status">正在读取历史版本…</p> : projectVersions.map((version) => (
                 <article className={`history-version-card ${version.version === result?.version ? "is-current" : ""}`} key={version.version}>
                   <div className="history-version-icon" aria-hidden="true">v{version.version}</div>
-                  <div className="history-version-content"><h3>{version.summary || version.name}</h3><time>{new Date(version.created_at).toLocaleString("zh-CN")}</time><footer><span>v{version.version}</span>{version.version === result?.version ? <small>当前版本</small> : <button aria-label={`恢复到版本 v${version.version}`} disabled={running || restoringVersion !== null} onClick={() => void restoreVersion(version.version)} type="button">{restoringVersion === version.version ? "恢复中…" : "↶ 恢复"}</button>}</footer></div>
+                  <div className="history-version-content"><h3>{version.summary || version.name}</h3><time>{new Date(version.created_at).toLocaleString("zh-CN")}</time><footer><span>v{version.version}</span>{version.version === result?.version ? <small>当前版本</small> : <button aria-label={`恢复到版本 v${version.version}`} disabled={running || restoringVersion !== null || preview.status === "restoring"} onClick={() => void restoreVersion(version.version)} type="button">{restoringVersion === version.version ? "恢复中…" : "↶ 恢复"}</button>}</footer></div>
                 </article>
               ))}
               {versionHistoryError ? <p className="version-history-error" role="alert">{versionHistoryError}</p> : null}

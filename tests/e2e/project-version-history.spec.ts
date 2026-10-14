@@ -14,6 +14,7 @@ test("工作区历史项目 UI 在同项目下展示 v2 和 v1（接口契约样
     ] }] },
   }));
   const projectId = "123e4567-e89b-42d3-a456-426614174000";
+  await page.route(`**/api/projects/${projectId}/preview-status`, (route) => route.fulfill({ json: { active: true, expiresAt: Date.now() + 900000, currentVersion: 2 } }));
   await page.route(`**/api/projects/${projectId}`, (route) => route.fulfill({ json: { files: [] } }));
   await page.route("**/api/generate", (route) => route.fulfill({
     contentType: "text/event-stream",
