@@ -1,5 +1,23 @@
 import { expect, test } from "@playwright/test";
 
+test("桌面分段滚动返回顶部时完整显示导航栏，不吸附到首屏内部", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto("/");
+  await page.locator(".home-product-section").first().scrollIntoViewIfNeeded();
+  await page.mouse.wheel(0, -10000);
+  // 观察滚动结束后的稳定位置，避免瞬间经过0就误判吸附回弹已经修复。
+  const restingPositions = await page.evaluate(async () => {
+    const positions: number[] = [];
+    for (let index = 0; index < 12; index++) {
+      await new Promise((resolve) => setTimeout(resolve, 100));
+      positions.push(window.scrollY);
+    }
+    return positions.slice(-4);
+  });
+  expect(restingPositions).toEqual([0, 0, 0, 0]);
+  await expect(page.getByRole("navigation", { name: "主导航" })).toBeInViewport({ ratio: 1 });
+});
+
 // 公开首页真实 UI 验收，不调用模型、不创建项目、不模拟产品结果。
 test("首页产品介绍出现在我的项目之后，保留需求入口", async ({ page }, testInfo) => {
   const errors: string[] = [];

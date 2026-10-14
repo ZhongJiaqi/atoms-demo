@@ -177,6 +177,13 @@ function HomeProductSections() {
   </div>;
 }
 
+const REQUIREMENT_EXAMPLES = [
+  { label: "项目看板", icon: "📋", description: "做一个项目看板：支持添加、编辑和删除任务，设置高、中、低优先级和截止日期，在待办、进行中、已完成之间移动任务，逾期任务高亮，刷新后保留数据。" },
+  { label: "个人记账", icon: "🧾", description: "做一个个人记账应用：录入收入和支出，填写金额、分类、日期和备注，展示本月收支汇总，支持按分类筛选和删除记录，刷新后保留数据。" },
+  { label: "个人主页", icon: "👤", description: "做一个可在线编辑的个人主页：展示姓名、简介、技能标签、项目经历和联系方式，支持预览和编辑切换、深色模式，修改后自动保存，刷新后保留数据。" },
+  { label: "习惯打卡", icon: "✅", description: "做一个习惯打卡应用：创建和删除习惯，支持每日打卡与取消打卡，展示今日完成进度和连续打卡天数，刷新后保留习惯和打卡记录。" },
+];
+
 function LandingPage({
   requirement,
   setRequirement,
@@ -232,6 +239,15 @@ function LandingPage({
             </button>
           </div>
         </form>
+        <div className="requirement-examples" role="group" aria-label="需求描述示例">
+          <span>试试这些想法</span>
+          <div>{REQUIREMENT_EXAMPLES.map((example) => <button
+            aria-pressed={requirement === example.description}
+            key={example.label}
+            onClick={() => { setRequirement(example.description); document.getElementById("hero-requirement")?.focus({ preventScroll: true }); }}
+            type="button"
+          ><span aria-hidden="true">{example.icon}</span>{example.label}</button>)}</div>
+        </div>
         <section className="home-projects" aria-label="我的项目">
           <header><h2>我的项目</h2></header>
           {historyError ? <p className="home-projects-empty" role="alert">{historyError}</p> : projectsLoading ? <p className="home-projects-empty" role="status">正在读取你的项目…</p> : signedIn && projects.length ? (

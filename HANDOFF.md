@@ -2,6 +2,14 @@
 
 更新时间：2026-10-14（Asia/Shanghai）
 
+## 最新增量：首页需求示例与顶部吸附修复
+
+- 首页输入框下新增项目看板、个人记账、个人主页、习惯打卡四个示例。点击只填写完整需求并focus(preventScroll)，不自动发送；可继续编辑/切换，匹配原文本时显示选中态。44px触控按钮、flex-wrap适配窄屏。未增加赛马/附件等未实现入口。
+- 用户报告滚到顶部自动下移。实际Chromium诊断记录initial/top scrollY=76、hero.offsetTop=76；首个scroll-snap-align错误在导航栏下的hero。改为landing-nav（页面0），保留下方三段吸附。最初测试瞬间经过0误判通过，改稳定采样后正确RED[76,76,76,76]，修复后GREEN[0,0,0,0]。
+- home-examples.spec.ts先缺按钮RED，再验证桌面1440、375、320px完整文本/焦点/选中态/编辑切换、开始可用、无自动生成请求/横向溢出、0console/network错误。桌面/320截图已实际查看。未改Agent、数据库、env、锁文件；用户指定Prompt模板路径仍不存在，未调整模型Prompt/调用策略。
+- 用户2026-10-14明确：本地功能验收完成后才考虑推GitHub与部署；推送前、部署前必须分别征得确认。尚未push/deploy，git remote -v为空；不得自行新建远端仓库或发布。原始5项缺专用邮箱账号的测试仍不算验收完成，线上macOS沙盒不兼容问题仍待解决。
+- 当前服务执行会话90939，http://127.0.0.1:3010。最终28单元、build/typecheck通过；完整Playwright26通过/5跳过/0失败（约1.2分钟），包含既有真实模型/数据库/沙盒恢复/回滚；5项跳过原因未变。独立本轮只读审查无Critical/Important/Minor发现。
+
 ## 最新增量：并行首页介绍、工作区控件与预览自动恢复
 
 - 主Agent负责预览恢复和统一build/Playwright，workspace_controls_polish负责限定工作区组件，home_product_sections负责限定LandingPage；独立preview_workspace_review只读审查。不要同时启动多个Playwright命令或共享.next的dev/build。
