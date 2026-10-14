@@ -112,26 +112,19 @@ async function homeCards(owner, fixtures) {
     const context = await browser.newContext({ viewport: { width: 1280, height: 900 }, serviceWorkers: "block" });
     await context.addCookies([...owner.cookies].map(([name, value]) => ({ name, value, url: ORIGIN, secure: true, sameSite: "Lax" })));
     const page = await context.newPage();
-    let consoleErrors = 0, badResponses = 0;
+    let consoleErrors = 0, badResponses = 0, automaticThumbnails = 0;
     page.on("pageerror", () => consoleErrors++);
     page.on("console", message => { if (message.type() === "error") consoleErrors++; });
     page.on("response", response => { if (response.status() >= 400) badResponses++; });
+    page.on("request", request => { if (/\/api\/projects\/[^/]+\/thumbnail$/.test(new URL(request.url()).pathname)) automaticThumbnails++; });
     await page.goto(ORIGIN, { waitUntil: "networkidle", timeout: 60000 });
     for (const { projectId } of fixtures) {
-      const image = page.locator(`img[data-project-id="${projectId}"][data-version="1"]`);
-      await image.scrollIntoViewIfNeeded({ timeout: 20000 });
-      await page.waitForFunction(id => {
-        const image = document.querySelector(`img[data-project-id="${id}"]`);
-        return image?.complete && image.naturalWidth === 960 && image.naturalHeight === 600;
-      }, projectId, { timeout: 30000 });
-      assert.match(await image.getAttribute("src"), new RegExp(`/api/projects/${projectId}/thumbnail\\?version=1$`));
-      const pixels = await image.evaluate(image => {
-        const canvas = document.createElement("canvas"); canvas.width = 960; canvas.height = 600;
-        const context = canvas.getContext("2d"); context.drawImage(image, 0, 0);
-        return [100, 860].map(x => [...context.getImageData(x, 100, 1, 1).data].slice(0, 3));
-      });
-      assert.deepEqual(pixels, [[220, 38, 38], [37, 99, 235]], "首页card必须显示实际红蓝截图，不接受空白或占位PNG");
+      const card = page.locator(`.home-project-card[href="/?project=${projectId}"]`);
+      await card.scrollIntoViewIfNeeded({ timeout: 20000 });
+      await card.getByRole("img", { name: "统一项目封面", exact: true }).waitFor({ timeout: 20000 });
+      assert.equal(await card.locator("img").count(), 0, "统一卡面不得恢复截图网络依赖");
     }
+    assert.equal(automaticThumbnails, 0, "首页不得自动调用保留的截图API");
     assert.equal(consoleErrors, 0, "首页不应有console错误");
     assert.equal(badResponses, 0, "正常首页不应有4xx/5xx");
     return { homeCards: fixtures.length, consoleErrors, badResponses };

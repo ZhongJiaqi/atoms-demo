@@ -1,0 +1,14 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Atoms Demo · 统一封面交付</title><style>body{margin:0;background:#f5f7fa;color:#202534;font:16px/1.8 system-ui,-apple-system,"PingFang SC",sans-serif}main{max-width:820px;margin:36px auto;padding:0 20px}section{margin:20px 0;padding:24px;background:white;border:1px solid #e2e6ee;border-radius:16px}h1{font-size:28px}h2{font-size:19px}a{color:#4662e6}code{overflow-wrap:anywhere}li{margin:6px 0}</style></head><body><main>
+<h1>统一 UI 封面已上线</h1><p>2026-10-14 · <a href="https://atoms-demo-jiaqi.vercel.app">打开正式站</a></p>
+<section><h2>本轮改动</h2><p>按用户确认，用冷灰蓝色、简洁应用窗口图形统一项目封面。图形为内联 SVG，不依赖图片加载、模型调用、沙盒截图或外部资源。frontend-design 技能用于保留原设计体系、圆角和响应式比例；项目名称及更新时间仍显示在封面下方，不重复展示名称、版本或详细描述。</p><p>保留原卡片项目链接、Agent、认证、预览及用户数据；没有删除旧截图缓存或移除后端截图接口。首页不再自动调用截图接口。邮件配置与真实 Gmail 注册验收结果保持有效。</p></section>
+<section><h2>已运行验证</h2><ul>
+<li>TDD：改动前旧正式页面两种视口均失败（缺少统一封面）；实现后本机 1470px 与 320px 两项通过，临时账号清理失败 0。</li>
+<li>正式站最终会话 68618：Playwright 2/2 通过、失败/跳过/不稳定均 0，临时用户 2、清理失败 0。</li>
+<li>真实登录，项目列表为明确的非 AI UI 契约样本；验证无封面 img、初次及刷新后截图请求 0、项目链接与名称保留、键盘聚焦、无横向溢出，console/pageerror 0、HTTP 4xx/5xx 0。</li>
+<li>截图前增加完整纵向可见及中心无遮挡检查；桌面和手机截图均实际查看正常。先前桌面截图裁切由程序滚动位置导致，未因此修改产品的分段滚动样式。</li>
+<li>类型检查通过、关联 runner 单测 4/4、独立审查无 Critical/Important；Vercel 正式构建与类型检查通过。</li>
+</ul></section>
+<section><h2>部署与范围</h2><p>部署 <code>dpl_DRXRv5HKbpPtLseBYyohQNqo35n1</code>，READY，155 源文件；CLI inspect 已确认主站指向此部署。环境变量、依赖及锁文件没有修改。</p><p>本轮没有重跑全量测试、真实模型生成/修改、历史回滚或 SMTP 邮件流程，符合增量验证策略。前一版真实 PNG 两场景已通过，但不作为本轮统一 UI 的模型验收。仍未验证真实手机硬件、大陆不同网络、所有浏览器及长期投递稳定性。</p><p>保留的后端截图诊断 runner 首页断言已同步为统一封面与零自动截图；显式后端 PNG/缓存/隔离断言仍保留。其更新只跑关联单测，未再次启动截图诊断沙盒。</p></section>
+<section><h2>回滚</h2><p>如需恢复真实封面展示，可恢复前一版 ProjectCover 与对应样式；项目代码、版本、聊天和已有缓存均未删除。生产回滚应再次获得用户批准。</p></section>
+</main></body></html>

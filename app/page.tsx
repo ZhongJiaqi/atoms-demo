@@ -126,11 +126,17 @@ function Logo({ compact = false }: { compact?: boolean }) {
   );
 }
 
-function ProjectCover({ project }: { project: ProjectSummary }) {
-  const [status, setStatus] = useState<"loading" | "ready" | "error">("loading");
-  return <div className="home-project-cover" data-status={status}>
-    {status !== "error" ? <img alt={`${project.name}最新版本的应用主页`} src={`/api/projects/${project.id}/thumbnail?version=${project.current_version}`} data-project-id={project.id} data-version={project.current_version} loading="lazy" onLoad={() => setStatus("ready")} onError={() => setStatus("error")} /> : null}
-    {status !== "ready" ? <span>{status === "error" ? "封面暂不可用，点击打开项目" : "正在准备应用主页…"}</span> : null}
+function ProjectCover() {
+  return <div className="home-project-cover" role="img" aria-label="统一项目封面">
+    <svg viewBox="0 0 240 150" aria-hidden="true" focusable="false">
+      <rect x="38" y="27" width="164" height="100" rx="8" fill="#fff" stroke="#ccd7e4" />
+      <path d="M38 51h164" stroke="#e0e7ef" />
+      <circle cx="50" cy="39" r="2.5" fill="#b5c3d4" /><circle cx="59" cy="39" r="2.5" fill="#c6d1df" /><circle cx="68" cy="39" r="2.5" fill="#d8e0ea" />
+      <rect x="49" y="63" width="32" height="52" rx="4" fill="#edf2f7" />
+      <rect x="92" y="63" width="65" height="6" rx="3" fill="#849bb9" />
+      <rect x="92" y="76" width="98" height="4" rx="2" fill="#e0e7ef" />
+      <rect x="92" y="92" width="44" height="23" rx="4" fill="#dce6f2" /><rect x="146" y="92" width="44" height="23" rx="4" fill="#edf2f7" />
+    </svg>
   </div>;
 }
 
@@ -257,7 +263,7 @@ function LandingPage({
           {historyError ? <p className="home-projects-empty" role="alert">{historyError}</p> : projectsLoading ? <p className="home-projects-empty" role="status">正在读取你的项目…</p> : signedIn && projects.length ? (
             <div className="home-project-grid">{projects.map((project) => (
               <a className="home-project-card" href={`/?project=${project.id}`} key={project.id}>
-                <ProjectCover key={`${project.id}-${project.current_version}`} project={project} />
+                <ProjectCover />
                 <h3>{project.name}</h3><small>最近更新 · {new Date(project.updated_at).toLocaleString("zh-CN")}</small>
               </a>
             ))}</div>
