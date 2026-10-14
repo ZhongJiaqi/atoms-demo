@@ -4,6 +4,9 @@
 
 ## 正式部署与线上验收进行中（以下旧记录为历史，不代表当前状态）
 
+- 最新：真实Expense复验63759完整passed1/failed0/skipped0/flaky0，temporaryUsers2/cleanupFailures0。录入/总额88.50/删除、iframe刷新及整页刷新数据保留、DB项目/最新version/messages/turns/files一致、console错误断言通过。三个代表case已分两轮全部取得通过结果（之前Task/Habit2pass+Expensefail，本次Expense1pass）；不伪称同一批3/3。expenseTotal仅测试定位器，优先testID，缺失时精确“总支出”标签parent，先strict标签拒重复并拒BODY/HTML/null避免读取其他区域金额。TDD两轮RED→GREEN，root fresh静态6/6+typecheck0，独立review Important1关闭。未改生产Agent/Prompt/模型策略或环境。
+- 用户允许整理后已保留backup/local-pre-push-20261014，原两未公开commit以ea63edb为父整理为25e0fda；假PAT改运行时synthetic构造，gitleaks全5commit0。git普通push已成功4c8843a→25e0fda，无force/无bypass，远端GitHub核心云代码已同步。新增定位器及本次验收报告待追加测试commit。
+- 公开新用户邮箱确认仍需SMTP（确认不关闭）；仅只读ai-news-radar/.env.local变量名未发现SMTP/Resend/Brevo等配置，无值输出/修改。已异步询问用户已有邮箱/发信服务名称，不在聊天索密钥。下一步由服务类型提供具体步骤/安全配置及实际注册收信验证。Google依旧暂缓，未启用；真实PNG/失败任务持久化/统一读取snapshot/孤儿GC/大陆真机网络尚未完成。
 - 用户已明确允许“整理并推送”：本地backup/local-pre-push-20261014已保留原56396b4及e1a241b历史；计划仅合并这两条未公开commit并移除假PAT，父commit仍ea63edb（沿已有远端main正常fastforward），不force、不改已公开历史。真实记账语义定位回归并行进行，尚未重跑记账。
 - 正式代表应用55835结果2通过/1失败，临时用户2/清理失败0：任务管理、习惯打卡通过；个人记账添加条目通过后缺expense-total测试标识，30s locator断言失败，删除/刷新后续未执行。实际失败PNG可见总支出¥88.50；仅读取本次临时项目API响应源码确认Summary reduce+toFixed正确且未加testID。准备语义“总支出”标签定位兼容，金额/删除/刷新断言保持，不改Agent或Prompt，不把定位失败冒称功能已完整验收。
 - 用户已批准推送云代码；实际git push被GitHub GH013阻止（远端未更新）：e1a241b/56396b4测试文件内手写假PAT符合格式，非真实凭据。gitleaks六commit扫描0但GitHub模式更严格；fixture已改运行时构造synthetic值，helper6/6通过。已再请求允许保留本地backup并整理未推送两commit再push，待答复，不绕过保护/不force/不改remotehistory。当前本地main56396b4，远端main仍4c8843a，未提交fixture修正和报告增量。

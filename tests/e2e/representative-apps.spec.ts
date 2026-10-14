@@ -1,4 +1,5 @@
 import { expect, test, type FrameLocator, type Page, type TestInfo } from "@playwright/test";
+import { expenseTotal } from "../utils/representative-locators";
 
 test.use({ actionTimeout: 30_000 });
 
@@ -78,7 +79,7 @@ const appCases: AppCase[] = [
       await category.selectOption({ index: 1 });
       await add.click();
       await expect(frame.getByTestId("expense-item").filter({ hasText: "团队午餐" })).toBeVisible();
-      await expect(frame.getByTestId("expense-total")).toContainText(/88[.,]50|88\.5/);
+      await expect(await expenseTotal(frame)).toContainText(/88[.,]50|88\.5/);
 
       await title.fill("临时支出");
       await amount.fill("12");
@@ -89,7 +90,7 @@ const appCases: AppCase[] = [
     },
     async verifyPersisted(frame) {
       await expect(frame.getByTestId("expense-item").filter({ hasText: "团队午餐" })).toBeVisible();
-      await expect(frame.getByTestId("expense-total")).toContainText(/88[.,]50|88\.5/);
+      await expect(await expenseTotal(frame)).toContainText(/88[.,]50|88\.5/);
       await expect(frame.getByTestId("expense-item").filter({ hasText: "临时支出" })).toHaveCount(0);
     },
   },
