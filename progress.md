@@ -5,6 +5,7 @@
 - 用户已确认公开ZhongJiaqi/atoms-demo仓库/main推送，批准@vercel/sandbox依赖/锁更新，生产部署仍需再次确认。
 - 固定SDK3.8.0，新增41包，旧包version变化0；未改env。gitleaks扫描历史仅一条ev_+SHA256调查证据ID误报，经精确fingerprint豁免再扫0泄漏，不上传生成数据/测试trace/环境文件。
 - 28单元/build/typecheck、完整浏览器26通过/5跳过/0失败；独立审查无重要问题。云端运行链路尚未接入，Vercel/Supabase新云资源与环境同步待用户确认。
+- PUBLIC仓库https://github.com/ZhongJiaqi/atoms-demo已创建并推送main（首次67f75ed），远端SHA与本地一致；未部署，后续新云资源/配置已发出确认问题。
 
 ## 会话：2026-10-14（首页示例与顶部滚动）
 

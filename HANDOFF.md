@@ -9,7 +9,7 @@
 - 公开历史审查：未跟踪env.local、generated-projects、trace或截图。gitleaks扫描6提交唯一命中findings.md:263；安全检查确认是ev_+64位SHA256调查证据ID，不是凭据。新增.gitleaksignore仅精确忽略该旧提交fingerprint，再扫0命中，禁止宽泛跳过整文件/规则。新增忽略.vercel目录，避免后续误提交平台本地配置。
 - 云端最小适配需短时VM构建/截图、私有持久产物、每次从DB恢复修改基线、跨实例项目租约、稳定独立项目preview Origin及签名授权。不能仅装SDK就宣称云端生成可用。
 - 安装后验证28单元、生产build/typecheck、完整Playwright26通过/5跳过/0失败（约1.1分钟）；5项仍缺专用邮箱测试账号。独立依赖审查无Critical/Important，文档过时Minor已更正。新增undici要求Node>=20.18.1，部署使用Node22或24；不在本轮自动改用户环境。
-- 当前本地服务执行会话11075，http://127.0.0.1:3010。公开仓库创建/推送正在执行，完成后记录remote及commit；生产云资源创建/配置仍等待确认。
+- 当前本地服务执行会话11075，http://127.0.0.1:3010。已创建PUBLIC仓库 https://github.com/ZhongJiaqi/atoms-demo，origin同URL加.git；main首次推送67f75ed96d1ef29abddc844a924f0e0a078ecd0c，git ls-remote与本地HEAD一致，已设置upstream。生产云资源创建/配置仍等待确认，不重复创建仓库。
 
 ## 初始上线检查（授权结论已被上方公开仓库确认替代）
 
