@@ -2,6 +2,31 @@
 
 更新时间：2026-10-14（Asia/Shanghai）
 
+## 最新增量：历史记录重设计与云基础真实验收
+
+- 用户明确拒绝大号 v1 占位封面和重复版本号：现已移除左侧图标块，只在标题旁显示一次小型 vN 标签；项目名为标题、变更摘要两行截断、时间和恢复操作位于 footer。当前版本采用细蓝色边线/状态点，底部恢复说明独立于滚动列表。保持原恢复处理、禁用条件、44px触控、focus trap/Esc及减弱动效，不新增假截图或图片构建请求。
+- frontend-design 技能遵循已有冷灰/蓝色系统；测试先复现标题被摘要替代，再复现版本图块46px超限，修改后通过。最终build成功，默认unit扩展为61/61通过；完整Playwright27通过/5跳过/0失败（约1.1分钟），含真实模型、DB、本地沙盒恢复及同项目回滚继续修改。UI契约用例不是云端验收。桌面1440和320/375px截图已实际查看；正常用例无非预期console/network错误。5项仍缺专用邮箱配置，不可声称全部通过。
+- 最新本地服务会话80542，http://127.0.0.1:3010，绑定0.0.0.0。独立UI复审无Critical/Important，删除了此次改动产生的孤儿.history-version-icon样式。
+- 用户要求并行：root负责UI及统一build/浏览器验收；cloud_agent_integration负责云Agent runtime；cloud_foundation_validation负责DB真实验收；history_ui_review先独立复核，后限定实现预览grant/domain基础模块。各任务不得同时写app/page.tsx或运行共享.next构建。
+- 独立Atoms ref jvnweimexkigooqvagfz 已正式应用202610140001_cloud_artifacts.sql和forward202610140002_cloud_conflict_errors.sql。首次真实RED不是通过：无租约保存发生90秒超时，15秒请求截止重现；自定义40001触发PostgREST无限重试。依据Supabase官方故障指南，forward只将云租约/云版本冲突转PT409（409），保留原本地RPC、事务/行锁/权限/空search_path，不修改已部署迁移、不删除已有数据。官方依据：https://supabase.com/docs/guides/troubleshooting/high-cpu-and-infinite-transaction-retries-when-using-custom-error-codes-in-rpc-functions-77326b
+- 云基础最终真实DB测试1/1通过（10.515秒）：私有5MiB bucket、签名读取、跨账号拒绝、并发租约唯一胜者、真实v1文件/消息/run、过期/旧令牌/释放后/旧基线拒绝且五表无变化。临时产物/项目/两个账号均清理。独立SQL/测试复审无Critical/Important；这是基础验收，不等于线上产品可用。
+- 新增runCloudGeneration保持原模型及两轮修复，通过/tmp独立任务目录、DB hydrate、真实云build、私有artifact与fenced快照保存；helper未接HTTP，previewReady:false且无伪造URL。33个云相关单元和原28个默认单元现统一纳入npm run test:unit（61项）；deadline迟到结果测试经过删除guard RED再恢复GREEN。真实整链测试和预览gateway仍在进行，不能宣称部署完成。
+- 云链仍有明确未完成：私有产物preview gateway及稳定独立origin接入、失败任务持久化、统一DB snapshot读取、孤儿产物回收、云封面、线上真实浏览器验收及大陆网络。正式部署仍要单独确认；尚未发布生产。
+
+## 最新运维状态：用户已配置预览管理 Token
+
+- 用户提供的 Dashboard 截图明确显示项目范围选择，包含 atoms-demo；用户随后按指导创建并保存 Token。没有在聊天中传递密钥。
+- 2026-10-14 只读 CLI 核验确认 ATOMS_VERCEL_API_TOKEN 有两条独立配置：production/sensitive 和 preview/sensitive，均未限定 gitBranch。检查仅输出名称、类型及目标环境，未读取或展示密钥值。
+- 当前只验证了变量存在和 Sensitive 类型，没有实测该 Token 的项目权限、到期日期或地址绑定能力；这些不能宣称通过。未覆盖本地环境文件，未部署或升级套餐。
+
+## 前序记录：CLI 创建 Token 被平台拒绝
+
+- 用户明确同意创建仅限 Atoms 项目、30 天有效的 Vercel 管理 Token，并仅在服务端加密保存；正式部署仍须单独确认。
+- 已重新核验 Vercel 链接：项目 atoms-demo，ID prj_Qy0ugq79jGkv9gAGc1vVeNtMpdkm，团队 jiaqis-projects-c666d1ab，Node 24.x。主站 atoms-demo-jiaqi.vercel.app 已绑定，尚无正式部署。
+- CLI 登录凭据调用 POST /v3/user/tokens（指定 projectId/expiresAt）失败：403 `Cannot create tokens for this app.`；只读 tokens ls 未发现本次命名的新增 Token。未取得或注入密钥，未覆盖任何环境变量，未改用全账户或团队 Token。
+- 官方 REST API 文档列出 projectId，但 Dashboard 创建指南只明确团队范围，实际项目限定权限尚未验证。需要用户网页授权/人工创建，或改为不依赖运行时管理 Token 的预览地址方案；不得把文档字段当成权限实测通过。
+- 已完成云 Sandbox 真实 SDK 构建测试；新增云存储/租约迁移 dry-run 仅显示 202610140001_cloud_artifacts.sql，尚未正式应用。云 Agent 链路、持久预览及线上验收仍未完成，不能宣称上线可用。
+
 ## 最新授权：公开GitHub与云端SDK
 
 - 用户明确要求创建公开（不是private）ZhongJiaqi/atoms-demo仓库并推送main，允许新增@vercel/sandbox及锁文件更新。尚未批准生产部署；云端环境变量同步和新服务配置仍需确认。

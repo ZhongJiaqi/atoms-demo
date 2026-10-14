@@ -830,18 +830,18 @@ export default function CodingAgentPage() {
       {versionHistoryOpen ? (
         <div className="version-history-backdrop" onClick={() => restoringVersion === null && setVersionHistoryOpen(false)}>
           <section ref={versionPanelRef} tabIndex={-1} className="version-history-panel" role="dialog" aria-modal="true" aria-label="历史记录" onClick={(event) => event.stopPropagation()}>
-            <header><h2>历史记录</h2><button aria-label="关闭历史记录" disabled={restoringVersion !== null} onClick={() => setVersionHistoryOpen(false)} type="button">×</button></header>
-            <div className="version-history-tabs"><span>版本</span></div>
+            <header><div><h2>历史记录</h2><p className="version-history-subtitle">每次成功构建，都是一个可恢复的版本</p></div><button aria-label="关闭历史记录" data-tooltip="关闭 · Esc" disabled={restoringVersion !== null} onClick={() => setVersionHistoryOpen(false)} type="button"><WorkspaceIcon name="close" /></button></header>
+            <div className="version-history-tabs"><span><WorkspaceIcon name="history" />版本</span><small>{versionHistoryLoading ? "读取中…" : `${projectVersions.length} 个版本`}</small></div>
             <div className="version-history-list">
               {versionHistoryLoading ? <p role="status">正在读取历史版本…</p> : projectVersions.map((version) => (
                 <article className={`history-version-card ${version.version === result?.version ? "is-current" : ""}`} key={version.version}>
-                  <div className="history-version-icon" aria-hidden="true">v{version.version}</div>
-                  <div className="history-version-content"><h3>{version.summary || version.name}</h3><time>{new Date(version.created_at).toLocaleString("zh-CN")}</time><footer><span>v{version.version}</span>{version.version === result?.version ? <small>当前版本</small> : <button aria-label={`恢复到版本 v${version.version}`} disabled={running || restoringVersion !== null || preview.status === "restoring"} onClick={() => void restoreVersion(version.version)} type="button">{restoringVersion === version.version ? "恢复中…" : "↶ 恢复"}</button>}</footer></div>
+                  <div className="history-version-content"><div className="history-version-heading"><span className="history-version-badge">v{version.version}</span><h3>{version.name}</h3></div>{version.summary ? <p className="history-version-summary" title={version.summary}>{version.summary}</p> : null}<footer><time dateTime={version.created_at}>{new Date(version.created_at).toLocaleString("zh-CN")}</time>{version.version === result?.version ? <small><i aria-hidden="true" />当前版本</small> : <button aria-label={`恢复到版本 v${version.version}`} disabled={running || restoringVersion !== null || preview.status === "restoring"} onClick={() => void restoreVersion(version.version)} type="button"><WorkspaceIcon name="history" />{restoringVersion === version.version ? "恢复中…" : "恢复此版本"}</button>}</footer></div>
                 </article>
               ))}
               {versionHistoryError ? <p className="version-history-error" role="alert">{versionHistoryError}</p> : null}
-              <p className="version-history-note">恢复会将旧代码保存为新版本，保留全部对话和历史版本。</p>
+              {!versionHistoryLoading && !versionHistoryError && projectVersions.length === 0 ? <p className="version-history-empty">尚无成功版本。完成首次构建后，版本会显示在这里。</p> : null}
             </div>
+            <p className="version-history-note"><WorkspaceIcon name="history" />恢复会将旧代码保存为新版本，保留全部对话和历史版本。</p>
           </section>
         </div>
       ) : null}
