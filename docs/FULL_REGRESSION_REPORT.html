@@ -1,7 +1,7 @@
 <!doctype html><html lang="zh-CN"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Atoms Demo 全量回归</title><style>body{font:16px/1.7 system-ui,sans-serif;background:#f5f7fc;color:#243149;max-width:960px;margin:auto;padding:30px 20px}section{background:white;border:1px solid #dfe5f0;border-radius:16px;padding:22px;margin:20px 0}h1{font-size:30px}h2{font-size:21px}table{width:100%;border-collapse:collapse}th,td{text-align:left;border-bottom:1px solid #e5eaf2;padding:10px;vertical-align:top}code{overflow-wrap:anywhere;font-size:13px}summary{cursor:pointer;font-weight:600}.table{overflow:auto}a{color:#3c55be}</style>
 <h1>Atoms Demo 全量回归</h1><p>2026-10-14 · 本地单元／集成 + 完整构建 + 正式站 Playwright</p>
-<section><h2>当前状态</h2><p id="overall">未全量通过。本地验证及新版部署完成；线上首轮 39 passed、2 failed、1 skipped，定向补验 1 passed、1 failed。累计 40 个线上用例通过，1 个仍失败，1 个真实邮件用例未执行。</p>
+<section><h2>当前状态</h2><p id="overall">已修复原回归阻塞并完成正式站补验。线上首轮 39 passed、2 failed、1 skipped；先补习惯删除确认，再部署增量 16k 修复，原 Todo 三轮真实场景通过。累计原 42 个线上用例中 41 个通过、1 个真实邮件用例未执行。本地原 12 个用例及新增真实优先级交互用例通过。以上是全量首轮加定向补验，不是再次全量跑绿。</p>
 <div class="table"><table><tr><th>阶段</th><th>结果</th><th>证据</th></tr>
 <tr><td>单元／边界测试</td><td>128 passed / 0 failed</td><td>test:unit 113；另补 capture-thumbnail、project-thumbnail、run-thumbnail-e2e 15。</td></tr>
 <tr><td>真实服务集成</td><td>3 passed / 0 failed / 0 skipped</td><td>真实 Atoms Supabase RLS、Storage、租约；DeepSeek 创建与修改保存 v1/v2；实际 Vercel Sandbox 构建及产物下载。</td></tr>
@@ -11,6 +11,8 @@
 <tr><td>新版正式部署</td><td>READY；正式域名指向新版</td><td><code>dpl_8i5nrmNwitdUJejTArTuvmMizoJz</code>；云端完整构建通过。</td></tr>
 <tr><td>线上 Playwright 首轮</td><td id="online">39 passed / 2 failed / 1 skipped / 0 flaky</td><td>会话 59969；2 个隔离临时账号，cleanupFailures=0。正式站真实回滚 v3、继续修改 v4、账号隔离通过。故意鉴权拒绝与普通网络错误分开。</td></tr>
 <tr><td>线上定向补验</td><td>1 passed / 1 failed / 0 skipped / 0 flaky</td><td>会话 66112；习惯确认删除与双层持久化通过，三轮 Todo 捕获真实模型截断错误；2 临时账号，cleanupFailures=0。</td></tr>
+<tr><td>预算修复推送／部署</td><td>远端一致；READY；正式域名已切换</td><td><code>30073e2c52ee0be9910f6ecdd039f59fd829be43</code>；<code>dpl_GkZuNubc1djYgN7Zs9UaKc42uJmX</code>。完整云构建通过，inspect 正式域名确认。</td></tr>
+<tr><td>修复后线上原三轮</td><td>1 passed / 0 failed / 0 skipped / 0 flaky</td><td>会话 3975；真实创建及两轮修改为同项目 v3，刷新重登、历史项目恢复、旧任务保留、跨账号拒绝；正常 console/pageerror/HTTP 错误 0。2 临时账号，cleanupFailures=0。</td></tr>
 </table></div></section>
 <section><h2>线上验收范围</h2><p>54 项仓库 E2E 按运行条件分组：12 项只在本机执行，42 项适用于正式站。UI 契约样本与真实服务验证分别说明，不将拦截响应算作模型或数据库验收。</p>
 <p>真实主线：DeepSeek 生成、iframe 交互、连续修改、项目和应用数据刷新保留、退出重登、历史版本恢复、回滚后在原项目继续修改、另一个账号读／修改／恢复拒绝。三个代表性应用为任务管理、记账、习惯打卡。</p>
@@ -21,10 +23,11 @@
 <p>习惯删除：失败现场明确出现页面内 alertdialog“删除习惯”和“确认删除”，旧测试只点击第一步。已同步测试的确认操作，仍必须实际验证记录移除及刷新持久化，没有修改 AI 应用或放宽 iframe 权限。</p>
 <p>共享脱敏函数原样移到测试工具 TypeScript 文件，避免 Playwright 静态导入 runner 的 import.meta 问题；原 runner 导出兼容保留，6 项相关单测及类型检查通过。会话 66112 只补验 Todo 三轮与习惯，其他已通过用例不重复执行。</p>
 <p><strong>已确认的产品问题：</strong>第三轮增加优先级时，模型连续两次返回 <code>finish_reason=length</code>，达到代码设定的 8,000 token 输出上限，增量补丁 JSON 被截断。新版测试及时读取真实 UI 错误，不再掩盖为总超时。v2 稳定版本保留，未保存无效 v3。调整整条测试预算没有修好这个产品问题。</p></section>
-<section><h2>未完成与风险</h2><p id="remaining">三轮 Todo 的输出预算修复已在本地通过，线上尚待部署验收。真实新邮箱的注册、邮件送达、点击确认和登录待用户提供可收信地址／授权。自动确认临时账号仅证明登录和后续功能，不证明 SMTP 验收。</p>
-<p>用户已授权最小修复：只将增量修改的输出上限由 8,000 提高到 16,000，首次生成保持 8,000；保留受控文件／资源／时间限制。已通过下述本地真实三轮验证，正式站尚待部署补验，不凭模型文档假称线上已修复。更大上限不强制填满，实际更多输出仍会消耗更多额度，减少重复截断也可能避免一次重试开销。<a href="https://help.aliyun.com/zh/model-studio/deepseek-v4-1-flash">官方模型上下文与输出限制</a></p>
+<section><h2>未完成与风险</h2><p id="remaining">真实新邮箱的注册、邮件送达、点击确认和登录待用户提供可收信地址／授权。自动确认临时账号仅证明登录和后续功能，不证明 SMTP 验收。新增优先级细项使用本地实际 v3 应用样本，正式站补验验证生成、保存、旧数据保留及恢复，不将控件清单当作线上每档编辑验收。</p>
+<p>用户已授权最小修复：只将增量修改的输出上限由 8,000 提高到 16,000，首次生成保持 8,000；保留受控文件／资源／时间限制。本地及正式站原失败场景已真实通过。更大上限不强制填满，实际更多输出仍会消耗更多额度，减少重复截断也可能避免一次重试开销。<a href="https://help.aliyun.com/zh/model-studio/deepseek-v4-1-flash">官方模型上下文与输出限制</a></p>
 <p>回归通过是当前样本与环境的证据，不保证任意自然语言都生成正确应用，不证明长期额度、所有大陆网络／浏览器、无障碍或生成应用存储异常处理完全合格。</p>
-<p>回退点：上一正式部署 <code>dpl_JnBWGPx3M517MZzQ4w3T1vqfbeZh</code>。若新版 Prompt 出现阻断问题，可回退提示词部署；不删除用户数据或回滚数据库。</p></section>
-<section><h2>授权修复：本地通过，准备上线</h2><p>用户已授权增量修改／增量构建修复 16,000 token，首次生成及其构建修复保持 8,000。只新增内部预算参数和 Patch Prompt 说明，不改两次 JSON 尝试、调用超时、权限或依赖。3 项 HTTP 边界测试先 RED 后 GREEN；模拟 provider 仅证明参数与解析合同，不冒充 AI 成功。受影响 15 项检查和完整生产构建通过。</p><p>本机首次真实测试被 Next 开发工具浮层截获退出登录操作，未到第三轮；两个临时账号清理成功，不计为修复通过。切换生产构建后，会话 78070 原三轮需求真实生成、同项目修改 v3、刷新／重登／隔离 1 passed，cleanupFailures=0。创建／修改／恢复功能未重写。</p><p>复用实际 v3 源码追加交互验收 58294：高优先级创建、刷新、改低／中并分别刷新保留，深色真实亮度变化／刷新保留，console/pageerror/HTTP 错误 0，无额外模型调用。最初测试 iframe 默认300px触发响应式隐藏控件，随后错误捕获CSS过渡中间颜色；根据实际CSS修正测试视口和等待条件，两次失败不冒称通过，没有手改AI应用。该补验针对实际生成样本的桌面控件，不声称覆盖所有随机应用或手机优先级编辑。</p><p>预算修复尚未上线，先提交推送与部署，正式站再定向跑同场景；不重复已通过的整套回归。</p></section>
+<p>预算修复回退点：上一正式部署 <code>dpl_8i5nrmNwitdUJejTArTuvmMizoJz</code>（旧增量 8k）；Prompt 回退点为 <code>dpl_JnBWGPx3M517MZzQ4w3T1vqfbeZh</code>。不删除用户数据或回滚数据库。</p></section>
+<section><h2>授权修复与本地验证过程</h2><p>用户已授权增量修改／增量构建修复 16,000 token，首次生成及其构建修复保持 8,000。只新增内部预算参数和 Patch Prompt 说明，不改两次 JSON 尝试、调用超时、权限或依赖。3 项 HTTP 边界测试先 RED 后 GREEN；模拟 provider 仅证明参数与解析合同，不冒充 AI 成功。受影响 15 项检查和完整生产构建通过。</p><p>本机首次真实测试被 Next 开发工具浮层截获退出登录操作，未到第三轮；两个临时账号清理成功，不计为修复通过。切换生产构建后，会话 78070 原三轮需求真实生成、同项目修改 v3、刷新／重登／隔离 1 passed，cleanupFailures=0。创建／修改／恢复功能未重写。</p><p>复用实际 v3 源码追加交互验收 58294：高优先级创建、刷新、改低／中并分别刷新保留，深色真实亮度变化／刷新保留，console/pageerror/HTTP 错误 0，无额外模型调用。最初测试 iframe 默认300px触发响应式隐藏控件，随后错误捕获CSS过渡中间颜色；根据实际CSS修正测试视口和等待条件，两次失败不冒称通过，没有手改AI应用。该补验针对实际生成样本的桌面控件，不声称覆盖所有随机应用或手机优先级编辑。</p><p>随后已推送、部署并完成表格中的正式站定向补验，不重复已通过的整套回归。</p></section>
 <section><h2>长期扩展方向（未实现）</h2><p>16k 是短期保护预算，不是大应用架构方案。后续将按任务读取相关代码，采用带原文匹配校验的差异补丁，必要时分多次受限调用；候选代码统一构建通过后原子保存为一个版本，失败保留稳定版。还需替换当前整项目源码约 11 万字符截取，避免静默丢失文件内容，并合理拆分大文件。当前16文件、单文件36,000字节、总源码140,000字节等安全限制未放宽。</p></section>
+<section><h2>最终补验结论</h2><p>正式部署及3975真实补验已完成闭环。提交前fresh相关15项测试、typecheck、diffcheck及gitleaks通过；独立审查Critical/Important 0。真实优先级细项审查补充三档互斥断言后，30299复验1 passed，0额外模型调用。本轮没有再次运行全套单元或全量E2E；此前完整构建后，正式部署又完成云端完整构建。本轮临时本地生产服务已核对PID/cwd后停止。</p></section>
 <section><h2>体验</h2><p><a href="https://atoms-demo-jiaqi.vercel.app/">打开 Atoms Demo</a> · <a href="PROMPT_QUALITY_REPORT.html">Prompt 优化报告</a></p></section></html>

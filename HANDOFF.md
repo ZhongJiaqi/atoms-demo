@@ -10,6 +10,10 @@
 
 ## 正式部署与线上验收进行中（以下旧记录为历史，不代表当前状态）
 
+- 本轮正式部署及定向验收已完成：3975 exit0，1passed/0failed/0skipped/0flaky，temporaryUsers2/cleanupFailures0。原需求三轮Todo创建→深色→优先级，同项目v3，真实模型/数据库/云沙盒、刷新重登、历史项目恢复、旧任务保留、跨账号读/修改拒绝，正常console/pageerror/HTTP错误0。预算修复production为30073e2+dpl_GkZuNubc1djYgN7Zs9UaKc42uJmX，正式域名inspect确认；仍DeepSeek，创建及创建修复8k/增量及增量修复16k，其他策略安全边界不变。原42项线上累计41通过+1真实SMTP未测，本机原12+新增真实v3优先级交互1通过；没有重跑全量，不能把累计说成本轮全量通过。priority三档细项只复验本地真实生成样本，线上spec只验v3生成/保留旧任务/恢复等，不把控件清单当每档操作验证。HTML报告已同步，真实邮件仍需授权，按需代码读取/差异补丁/多次受限调用方案尚未实现。剩余Google暂停资料和其他untracked历史benchmark资料不包含本次提交。不要继续重复已过全套或自动发信。
+
+- 最小预算修复已提交推送30073e2c52ee0be9910f6ecdd039f59fd829be43，远端回读一致；提交前diffcheck/gitleaks无泄露、typecheck exit0、fresh受影响15/15、真实v3三档互斥复验30299 1passed。独立review C/I0。正式部署51524云构建通过READY dpl_GkZuNubc1djYgN7Zs9UaKc42uJmX（mmixm8o9a），8092 inspect确认atoms-demo-jiaqi正式域名指向该版本。3975正式站phase2仅原Todo三轮正在运行，尚不能宣称线上通过；使用2隔离临时账号、管理密钥不进子进程、不自动发邮件，结束必须核对cleanupFailures。未改env/lock/DB/权限/模型顺序。已核对本轮临时本地服务39084的cwd后killINT，不影响其他服务。可回退前一正式部署dpl_8i5nrmNwitdUJejTArTuvmMizoJz，不删除用户数据。
+
 - 16k本地真实验收通过：78070本地生产模式phase2 1passed/0failed/0skip/0flaky，2临时账号cleanup0，原三轮需求文本不变、同项目v3/刷新重登隔离/console网络0。本机真实v3项目1144fc53-31f8-4ac3-a047-3846b7345c32（DB账号已清理，本地受控源码目录仍在），追加priority-generated-app.spec.ts只复用该目录（realpath/root/UUID/model/version/requirement guard），实际高创建→真Frame.goto保留→改低/中各刷新保留→深色亮度变化和刷新保留，58294 1passed（0modelcalls/console/network0），finally停止本次新preview。早期27260默认300px iframe使生成CSS隐藏picker，83853捕获CSStransition中间颜色误判，已按真实CSS用全屏desktop和亮度poll修正；未手改生成代码，不声称手机优先级修改已验。审查指出应验证三档互斥，已补目标true及另外两档false，每次刷新均检查，30299复验1passed（0模型调用）。准备stage/push/deploy；线上16k尚未验，不说全量成功。
 
 - 用户已明确授权最小16k修复/本地三轮验证/推送部署/线上定向补验；后续大项目方案为按需读取相关代码＋带原文校验的差异补丁＋分次受限修改最终统一构建保存，当前不重写Agent，不把16k说成长期解决方案。模板claude-prompt-template.md本轮完整重读，TDD与systematic-debugging遵循。新model-output-budget.test.ts旧代码RED1pass2fail，新代码GREEN3pass，HTTP受控provider只证明预算/解析合同、不冒充AI生成；fixture24kASCII经mergeProjectPatch满足36k安全上限。lib/agent/model.ts仅新增MAX_PATCH_OUTPUT_TOKENS16000、requestJson默认8k预算参数、completePatch传16k（含repairPatch），patchPrompt强调不删除功能/降质；首次生成及其修复8k，JSON尝试2/120s/安全约束不变；package仅加入测试入口，无env/lock/依赖变更。
