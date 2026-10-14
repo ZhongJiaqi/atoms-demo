@@ -4,6 +4,8 @@
 
 ## 最新增量：全宿主 UI 优化与首页项目封面
 
+- 2026-10-14 追加需求：首页卡片移除详细描述，仅保留应用主页封面、项目名称与最近更新时间。仅改首页JSX与其孤儿CSS，不改聊天/历史摘要或数据库。新增真实卡片无描述断言已先失败（存在1个描述段落）；修改后28单元、build/typecheck、12项Playwright全部通过（44.6秒），正常操作无非预期console/network错误。服务执行会话更新为7629。
+
 - 使用 frontend-design、redesign-existing-projects、adapt、animate，基于原 UI 增量统一冷灰底色/单蓝强调/系统字体/间距/圆角/轻量动效，无新增 UI 库，无 Agent 模型策略改动。
 - 首页“我的项目”只有成功项目（current_version>0），一个项目一张卡，不显示版本列表/查看历史项目。草稿仍保存在数据库，不删除用户数据。单测已先复现再验证修复，真实 DB 用例会创建一个草稿并断言首页仍只有一张成功卡片。
 - 首页封面从 live iframe 改成真实 PNG：新增私有 GET /api/projects/[projectId]/thumbnail?version=N，验证会话/所有权/版本，读取不可变版本源码，在自己的 thumbnail-UUID 临时目录构建/启动，干净 Chromium 截图后关闭浏览器/Vite、回收临时目录。缓存位于 generated-projects/.thumbnails，不代替数据库永久代码。
@@ -15,7 +17,7 @@
 - 运行依赖：2026-10-14 用户明确允许后，已把playwright 1.64.0声明为直接正式依赖；锁文件只新增根依赖、移除playwright/playwright-core的devOptional标记，无其他包版本变动。离线package-lock-only因无关可选包缓存缺失失败，随后用最小补丁更新；npm ci --omit=dev --ignore-scripts --dry-run --offline与npm ls --omit=dev均通过（仅模拟生产安装，不冒称全新环境实际安装）。生产build、28单元及相关4项浏览器回归通过，未改环境变量。next.config.ts外置playwright。线上仍必须提供Chromium运行时/隔离adapter，现阶段是本地macOS沙盒架构；截图浏览器暂未纳入Vite RSS监控，不宣称部署完成。独立初审已完成，最终独立复核因代理额度限制失败，不能写最终独立review通过。
 - 设计报告：docs/UI_POLISH.html（中文单文件HTML）。响应式测试使用 Chromium viewport 与有效 CSS viewport 模拟桌面缩放，不冒称真实手机或原生浏览器zoom/多浏览器已测试。
 - 本轮不改 .env/锁文件，不操作 ai-news-radar，不删除原用户数据。关键改动：app/page.tsx、app/globals.css、listUserProjects、thumbnail route/queue、next.config.ts、package.json test:unit、新增 responsive-design/project-thumbnail/thumbnail-queue 回归及扩充真实 rollback 用例。
-- 当前生产体验服务：http://127.0.0.1:3010（监听0.0.0.0:3010，执行会话89761）。测试结束已删除仅由本测试新建的两个临时账号及项目/目录/截图缓存；你的真实数据未动。浏览器网络trace含临时会话信息，勿公开上传。
+- 当前生产体验服务：http://127.0.0.1:3010（监听0.0.0.0:3010，执行会话7629）。测试结束已删除仅由本测试新建的两个临时账号及项目/目录/截图缓存；你的真实数据未动。浏览器网络trace含临时会话信息，勿公开上传。
 
 ## 当前结论
 

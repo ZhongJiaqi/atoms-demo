@@ -170,7 +170,6 @@ button:disabled { cursor: not-allowed; }
 .home-project-cover[data-status="loading"] img { opacity: 0; }
 .home-project-cover > span { position: absolute; inset: 0; display: grid; place-items: center; padding: 16px; text-align: center; }
 .home-project-card h3 { margin: 18px 8px 8px; font-size: 17px; font-weight: 600; line-height: 1.4; }
-.home-project-card p { overflow: hidden; margin: 0 8px 18px; color: var(--atoms-muted); font-size: 13px; white-space: nowrap; text-overflow: ellipsis; }
 .home-project-card small { display: block; margin: 0 8px 8px; color: var(--atoms-muted); font-size: 12px; }
 .conversation-scroll { min-height: 0; overflow-y: auto; padding: 18px 24px 24px; scrollbar-width: thin; scrollbar-color: #d7d7da transparent; }
 .session-status { display: flex; align-items: center; gap: 8px; margin-bottom: 20px; color: #87888c; font-size: 11px; }

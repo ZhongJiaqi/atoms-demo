@@ -103,6 +103,7 @@ test("真实数据库历史回滚、iframe、刷新及恢复后继续修改同�
     await page.goto("/");
     const myProjects = page.getByRole("region", { name: "我的项目", exact: true });
     await expect(myProjects.locator(".home-project-card")).toHaveCount(1);
+    await expect(myProjects.locator(".home-project-card p")).toHaveCount(0);
     await expect(myProjects.locator(`a[href="/?project=${projectId}"]`)).toHaveCount(1);
     await expect(myProjects.getByTestId("project-version")).toHaveCount(0);
     await expect(myProjects.getByRole("button", { name: "历史项目", exact: true })).toHaveCount(0);

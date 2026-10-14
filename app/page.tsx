@@ -189,7 +189,7 @@ function LandingPage({
             <div className="home-project-grid">{projects.map((project) => (
               <a className="home-project-card" href={`/?project=${project.id}`} key={project.id}>
                 <ProjectCover key={`${project.id}-${project.current_version}`} project={project} />
-                <h3>{project.name}</h3><p>{project.summary || "尚未生成成功版本"}</p><small>最近更新 · {new Date(project.updated_at).toLocaleString("zh-CN")}</small>
+                <h3>{project.name}</h3><small>最近更新 · {new Date(project.updated_at).toLocaleString("zh-CN")}</small>
               </a>
             ))}</div>
           ) : <p className="home-projects-empty">{signedIn ? "还没有项目，描述你的想法开始创建。" : "登录后，你的项目会出现在这里。"}</p>}
