@@ -2,6 +2,21 @@
 
 更新时间：2026-10-14（Asia/Shanghai）
 
+## 最新增量：全宿主 UI 优化与首页项目封面
+
+- 使用 frontend-design、redesign-existing-projects、adapt、animate，基于原 UI 增量统一冷灰底色/单蓝强调/系统字体/间距/圆角/轻量动效，无新增 UI 库，无 Agent 模型策略改动。
+- 首页“我的项目”只有成功项目（current_version>0），一个项目一张卡，不显示版本列表/查看历史项目。草稿仍保存在数据库，不删除用户数据。单测已先复现再验证修复，真实 DB 用例会创建一个草稿并断言首页仍只有一张成功卡片。
+- 首页封面从 live iframe 改成真实 PNG：新增私有 GET /api/projects/[projectId]/thumbnail?version=N，验证会话/所有权/版本，读取不可变版本源码，在自己的 thumbnail-UUID 临时目录构建/启动，干净 Chromium 截图后关闭浏览器/Vite、回收临时目录。缓存位于 generated-projects/.thumbnails，不代替数据库永久代码。
+- 截图任务去重/串行，队列容量6；网络只允许本次随机 loopback 沙盒，无用户 Cookie/应用 storage。截图失败显示真实封面错误但项目链接仍可打开。普通与新标签点击都是原项目最新版本的恢复链接，不在首页提前 resume。
+- 保留手机历史版本/登录/控制台；核心控件44px、输入16px、聊天文字换行、预览适配短横屏。图标 tooltip 同时支持 hover 与键盘 focus；普通文字按钮不重复弹提示。版本面板支持初始焦点、Tab循环、Esc、返回焦点。
+- 新增 Enter 发送、Shift+Enter 换行与 IME 保护。动画仅轻位移/透明度与真实状态反馈，尊重 reduced-motion（包括滚动）。移除假附件/折叠/发布入口，分享发布按用户要求暂缓。
+- 最终验证：28/28单元、生产build/typecheck、12/12 Playwright通过（45.2秒）。真实DB/模型/沙盒、回滚、PNG版本区别、截图目录清理、同浏览器退出A并登录B后的图片404拒绝均通过；正常操作0非预期console error/4xx/5xx。无效登录400、未登录401、越权404、冲突409及网络阻断为明确预期测试。第一轮10 Playwright通过；随后同浏览器换账号测试发现退出303跳向0.0.0.0，曾10通过/1超时；已先复现303再改退出API为JSON结果，前端仅成功后跳首页、失败展示反馈，最终回归通过。
+- 复审修正：图片private,no-store避免跨账号浏览器缓存；服务器缓存32MiB上限按最旧PNG清理，临时文件rename原子写；浏览器上下文阻断所有WebSocket、禁WebRTC/ServiceWorker/背景网络，HTTP仅随机origin的GET。新增真实网络守卫测试和缓存单测先RED后GREEN。该浏览器层守卫不是OS网络隔离证明。320px按钮固定不收缩/不换行；恢复焦点trap生命周期只随面板打开，读取恢复状态ref，恢复中聚焦panel。
+- 运行依赖：新增接口复用本地已有 Playwright 开发依赖和已安装 Chromium；next.config.ts 外置 playwright。生产必须将playwright声明为直接运行依赖；已通过async问用户是否允许更新声明与锁文件，尚无明确回复，未擅改锁。部署线上时必须提供生产截图运行时/隔离 adapter，现阶段仍是本地 macOS 沙盒架构。截图浏览器暂未纳入 Vite RSS 监控，线上公开前需独立资源控制；不宣称部署完成。独立初审已完成，最终独立复核因代理额度限制失败，不能写最终独立review通过。
+- 设计报告：docs/UI_POLISH.html（中文单文件HTML）。响应式测试使用 Chromium viewport 与有效 CSS viewport 模拟桌面缩放，不冒称真实手机或原生浏览器zoom/多浏览器已测试。
+- 本轮不改 .env/锁文件，不操作 ai-news-radar，不删除原用户数据。关键改动：app/page.tsx、app/globals.css、listUserProjects、thumbnail route/queue、next.config.ts、package.json test:unit、新增 responsive-design/project-thumbnail/thumbnail-queue 回归及扩充真实 rollback 用例。
+- 当前生产体验服务：http://127.0.0.1:3010（监听0.0.0.0:3010，执行会话75633）。测试结束已删除仅由本测试新建的两个临时账号及项目/目录/截图缓存；你的真实数据未动。浏览器网络trace含临时会话信息，勿公开上传。
+
 ## 当前结论
 
 Phase 2 的本地代码骨架已经完成：邮箱认证、用户会话、项目数据库持久化、历史项目、项目恢复、RLS 数据隔离和真实 E2E 验收脚本均已接入现有 Coding Agent，没有重写模型生成、两轮自动修复、SSE 或本地 Sandbox 核心链路。

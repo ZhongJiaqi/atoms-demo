@@ -48,3 +48,11 @@ HEADLESS=true E2E_REAL_MODEL=1 ATOMS_E2E_BASE_URL=http://127.0.0.1:3010 npm run 
 需已登录的 Supabase CLI，以及本项目 `.env.local` 中的公开 Supabase 配置和模型配置。用例仅在测试 Node 进程取得本项目管理凭据，自动创建两个临时已确认账号，结束时清理本用例账号、项目和临时运行目录；不会读取或删除已有真实用户的数据。管理凭据不写入环境文件或浏览器。测试报告与 trace 可能包含临时账号会话信息，不要公开上传。
 
 用例先通过真实 RLS 保存两个明确的测试源码版本（不冒称模型生成），再验证真实登录、v2 恢复 v1 并保存为 v3、iframe 点击、源码与事件一致、页面刷新、一次真实模型修改为 v4、首页项目卡片、再次通过 UI 恢复为 v5、临时目录回收及第二账号无权恢复原项目。保存响应丢失等故障另由 `tests/persistence/restore-version.test.ts` 验证；真实沙盒进程退出拒绝激活由 `types-file-sandbox.spec.ts` 验证。
+
+2026-10-14 追加：首页创建一个真实无成功版本草稿，断言仍只有一张成功项目卡；真实PNG封面版本/签名/尺寸、旧新封面差异、截图目录回收；同一浏览器退出A再登录B后，旧封面URL必须经网络鉴权返回404，不能读取浏览器私有缓存。
+
+## UI 与封面安全回归
+
+`responsive-design.spec.ts` 验证320–2560px、手机横竖屏与模拟80%/125%/200%桌面缩放后的有效CSS viewport；工作区部分使用明确的API契约样本，只证明UI交互，不是模型/数据库验收。覆盖Enter/Shift+Enter/IME、键盘图标提示、弹层focus/Escape、发送按钮位置、无横向溢出和reduced-motion。
+
+`project-thumbnail.spec.ts` 验证未登录拒绝及真实Chromium的HTTP/WebSocket/WebRTC通道守卫。对应缓存/排队边界由单元测试覆盖。请勿同时运行多个Playwright命令共用默认报告目录，避免trace被互相清理。

@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Atoms Demo · 界面优化记录</title>
+<style>
+:root{font-family:-apple-system,"PingFang SC",sans-serif;color:#202534;background:#f5f7fa;line-height:1.7}body{max-width:960px;margin:auto;padding:clamp(20px,5vw,64px)}h1{font-size:clamp(28px,5vw,44px);line-height:1.2;letter-spacing:-.035em}h2{font-size:20px;margin:32px 0 12px}p{color:#687184}section{padding:24px;background:white;border:1px solid #e2e6ee;border-radius:16px;margin:16px 0}.palette{display:flex;flex-wrap:wrap;gap:12px}.swatch{display:flex;align-items:center;gap:8px}.swatch i{display:block;width:32px;height:32px;border-radius:8px;border:1px solid #e2e6ee}li{margin:8px 0}code{font-size:13px;background:#f0f3fa;padding:3px 6px;border-radius:5px}details{margin:16px 0}summary{cursor:pointer;font-weight:600}strong{color:#202534}.note{border-left:3px solid #4662e6;padding-left:16px}a{color:#4662e6;overflow-wrap:anywhere}table{border-collapse:collapse;width:100%;font-size:14px}th,td{padding:12px 8px;border-bottom:1px solid #e2e6ee;text-align:left}
+</style></head><body>
+<p>2026-10-14 · 增量优化 · 保留现有 Agent</p><h1>一个想法，一致的工作体验</h1>
+<p>目标：科技、高级、简约。优化宿主首页、登录与注册、项目工作区、代码与预览、项目列表和版本面板；不重新设计用户生成的应用，不改变模型调用策略。</p>
+<section><h2>视觉系统</h2><div class="palette"><span class="swatch"><i style="background:#4662e6"></i>单一蓝色强调</span><span class="swatch"><i style="background:#202534"></i>冷深灰文字</span><span class="swatch"><i style="background:#f5f7fa"></i>冷灰背景</span><span class="swatch"><i style="background:#fff"></i>白色工作面</span></div><p>系统字体不依赖外部字体下载。标题与正文形成层级；容器 14–20px 圆角，按钮 10–13px 圆角；细边框与低强度阴影，轻量 radial 背景，不使用满屏炫光。</p></section>
+<section><h2>核心变化</h2><ul>
+<li><strong>我的项目：</strong>一个成功项目一张卡片，隐藏 current_version=0 的草稿，不删除数据；移除首页“查看历史项目”和卡片版本列表。</li>
+<li><strong>真实封面：</strong>由保存的不可变版本代码在独立受控沙盒构建，使用干净浏览器上下文截图。按项目与版本缓存 PNG，不在首页后台持续运行每个项目的 iframe。</li>
+<li><strong>交互：</strong>按钮统一悬停/按下/键盘 focus 反馈；关键图标提供 hover 与 focus 文字提示。Enter 发送、Shift+Enter 换行，中文输入法组合期间不发送。</li>
+<li><strong>手机：</strong>保留登录、历史版本、项目文件和控制台入口；底部对话/预览/代码切换。核心图标与认证控件的点击区域至少 44px；输入框 16px 避免手机自动放大。</li>
+<li><strong>版本面板：</strong>轻量滑入；打开聚焦关闭按钮，键盘 Tab 保持在面板内，Esc/遮罩关闭，返回原触发控件。</li>
+<li><strong>动画：</strong>短时淡入与位移、卡片微抬升、真实执行状态动效；尊重 prefers-reduced-motion，聊天滚动也取消平滑动画。</li>
+<li><strong>诚实的入口：</strong>移除尚未实现的附件、折叠与虚假发布入口；分享/发布仍按用户要求暂缓，独立打开预览保留。</li>
+</ul></section>
+<section><h2>验证状态</h2><p id="verification">最终28/28单元测试、生产构建及类型检查、12/12 Playwright通过（45.2秒）。真实换账号缓存隔离首次发现退出接口跳转到0.0.0.0导致超时，已改为JSON结果并先失败后通过。正常操作无非预期console error和4xx/5xx；专门验证无效登录、未登录、越权、冲突与网络阻断时的错误为预期拒绝。服务保持在 http://127.0.0.1:3010。</p>
+<table><thead><tr><th>范围</th><th>证据与边界</th></tr></thead><tbody>
+<tr><td>响应式</td><td>首页/认证 320、375、768、1440、2560px；工作区桌面、平板、手机横竖屏。检查横向溢出、核心入口与发送按钮位置。</td></tr>
+<tr><td>缩放</td><td>通过有效 CSS viewport 模拟 80% / 125% / 200% 的桌面缩放重排；没有冒称原生浏览器快捷键缩放、真实手机或所有浏览器都已测试。</td></tr>
+<tr><td>核心回归</td><td>真实 Supabase 临时账户/RLS/源码版本、真实模型继续修改、真实受控构建、iframe 点击、PNG 版本差异与资源回收。失败/冲突/无权访问断言的 400/401/404/409 为预期拒绝。</td></tr>
+<tr><td>UI 契约</td><td>尺寸与弹层测试使用明确标记的工作区 API 样本，仅证明界面交互，不代替真实模型或数据库验收。</td></tr>
+</tbody></table></section>
+<details><summary>封面运行与安全边界</summary><p>新接口使用当前用户会话与 RLS 验证项目所有权，不接受 user_id，不读取高权限密钥。截图同任务去重、一次运行一个、最多六个任务；普通请求仅允许本次随机 loopback origin 的 GET，所有 WebSocket 被关闭，WebRTC 构造器禁用、Service Worker 禁用，不带登录 Cookie 或应用用户存储。使用 <a href="https://playwright.dev/docs/api/class-browsercontext#browser-context-route-web-socket">Playwright 官方上下文 WebSocket 路由</a>阻断通道。网络守卫经真实 Chromium 与本地服务器验证，但这不是操作系统级网络隔离证明。构建继续使用既有资源、文件权限与时间限制，截图结束关闭浏览器与 Vite 并回收临时目录。</p><p>PNG 位于 generated-projects/.thumbnails，是可重建缓存，不是永久代码存储。服务器缓存最多32MiB，按最旧PNG回收、原子rename写入；浏览器 private,no-store，切换账号必须重新鉴权。现有 Playwright 来自测试开发依赖和本机 Chromium；正式运行依赖与锁文件调整已向用户询问，待批准。线上还需要专用截图/沙盒 adapter 及 Chromium 运行时，不能直接承诺 Vercel 可运行。截图浏览器目前未加入既有 Vite 的 RSS 监控，在线公开前需要独立资源隔离。</p></details>
+<details><summary>复审修正记录</summary><p>独立初审发现私有浏览器缓存、WebSocket通道、无界磁盘缓存、开发依赖和320px按钮换行问题。前四项中缓存/网络/容量已按测试修复，按钮也固定为单行；依赖变更等待明确批准。恢复时focus trap生命周期与纯文本根节点问题一并修正。最后独立复核因审查代理额度限制未执行，不能声称最终独立复审通过；主代理正在进行差异检查和测试核验。</p></details>
+<details><summary>未扩大范围</summary><p>不修改生产环境变量或锁文件、不安装 UI 包、不修改 ai-news-radar、不删除已有账号/项目。不将本轮回滚回归等同于完整邮件注册→Todo首次生成→两轮修改→宿主销毁恢复全流程；线上部署和三家浏览器/真机实测仍需后续验收。</p></details>
+</body></html>

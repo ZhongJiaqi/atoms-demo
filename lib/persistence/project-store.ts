@@ -230,7 +230,7 @@ export async function listUserProjects(client: ProjectQueryClient) {
   const projects = (data ?? []) as Array<PersistedProjectBundle["project"] & {
     versions?: Array<{ version: number; name: string; summary: string; created_at: string }>;
   }>;
-  return projects.map((project) => ({
+  return projects.filter((project) => project.current_version > 0).map((project) => ({
     ...project,
     versions: [...(project.versions ?? [])].sort((left, right) => right.version - left.version),
   }));

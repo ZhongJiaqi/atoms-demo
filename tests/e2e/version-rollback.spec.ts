@@ -61,6 +61,8 @@ test("真实数据库历史回滚、iframe、刷新及恢复后继续修改同�
     const preview = page.getByTestId("generated-preview");
     await expect(preview).toHaveAttribute("data-version", "2");
     await expect(page.frameLocator('[data-testid="generated-preview"]').getByTestId("version-marker")).toHaveText("深色版");
+    const firstCover = await page.request.get(`/api/projects/${projectId}/thumbnail?version=2`);
+    expect(firstCover.headers()["cache-control"]).toContain("no-store");
     await page.getByRole("button", { name: "历史记录", exact: true }).click();
     await expect(page.getByRole("dialog", { name: "历史记录", exact: true })).toBeVisible();
     await expect(page.getByRole("button", { name: "恢复到版本 v1", exact: true })).toBeVisible();
@@ -97,13 +99,30 @@ test("真实数据库历史回滚、iframe、刷新及恢复后继续修改同�
     await expect(frame.getByTestId("version-marker")).toHaveText("回滚后继续修改");
     await frame.getByRole("button", { name: "计数 0", exact: true }).click();
     await expect(frame.getByRole("button", { name: "计数 1", exact: true })).toBeVisible();
+    await createProjectDraft(store, { projectId: randomUUID(), name: "更晚创建但尚未成功的草稿" });
     await page.goto("/");
     const myProjects = page.getByRole("region", { name: "我的项目", exact: true });
-    await expect(myProjects.locator(`a[href="/?project=${projectId}"]`)).toContainText("v4");
+    await expect(myProjects.locator(".home-project-card")).toHaveCount(1);
+    await expect(myProjects.locator(`a[href="/?project=${projectId}"]`)).toHaveCount(1);
+    await expect(myProjects.getByTestId("project-version")).toHaveCount(0);
+    await expect(myProjects.getByRole("button", { name: "历史项目", exact: true })).toHaveCount(0);
+    const cover = myProjects.locator(`img[data-project-id="${projectId}"]`);
+    await expect(cover).toHaveAttribute("data-version", "4");
+    await expect.poll(() => cover.evaluate((el) => (el as HTMLImageElement).naturalWidth), { timeout: 60000 }).toBe(960);
+    const thumbnail = await page.request.get(`/api/projects/${projectId}/thumbnail?version=4`);
+    expect(thumbnail.headers()["content-type"]).toContain("image/png");
+    expect(thumbnail.headers()["x-project-version"]).toBe("4");
+    expect([...(await thumbnail.body()).subarray(0, 8)]).toEqual([137,80,78,71,13,10,26,10]);
+    const oldThumbnail = await page.request.get(`/api/projects/${projectId}/thumbnail?version=1`);
+    expect(oldThumbnail.headers()["x-project-version"]).toBe("1");
+    expect((await oldThumbnail.body()).equals(await thumbnail.body())).toBe(false);
+    expect((await readdir(GENERATED_ROOT)).filter((name) => name.startsWith(`thumbnail-${projectId}-`))).toEqual([]);
     await expect(page.getByRole("button", { name: "退出登录", exact: true })).toBeVisible();
     await page.screenshot({ path: testInfo.outputPath("home-projects.png"), fullPage: true });
     await myProjects.locator(`a[href="/?project=${projectId}"]`).click();
-    await expect(page.getByTestId("generated-preview")).toHaveAttribute("data-version", "4");
+    await expect(page.getByTestId("generated-preview")).toHaveAttribute("data-version", "4", { timeout: 3000 });
+    await expect(page.getByTestId("generated-preview")).toHaveAttribute("data-project-id", projectId);
+    await expect(page.frameLocator('[data-testid="generated-preview"]').getByTestId("version-marker")).toHaveText("回滚后继续修改");
     await page.getByRole("button", { name: "历史记录", exact: true }).click();
     await page.getByRole("button", { name: "恢复到版本 v1", exact: true }).click();
     await expect(page.getByTestId("generated-preview")).toHaveAttribute("data-version", "5", { timeout: 60000 });
@@ -127,8 +146,27 @@ test("真实数据库历史回滚、iframe、刷新及恢复后继续修改同�
       expect(denied.status()).toBe(404);
       const otherProjects = await otherPage.request.get(`${new URL(page.url()).origin}/api/projects`);
       expect((await otherProjects.json()).projects).toEqual([]);
+      const privateCover = await otherPage.request.get(`${new URL(page.url()).origin}/api/projects/${projectId}/thumbnail?version=4`);
+      expect(privateCover.status()).toBe(404);
     } finally { await otherContext.close(); }
     expect(errors).toEqual([]); expect(failures).toEqual([]);
+    // 同一浏览器上下文先由 A 加载 v4 封面，再退出并登录 B：不得命中 A 的私有浏览器缓存。
+    await page.getByRole("button", { name: "退出登录", exact: true }).click();
+    await page.waitForURL((target) => target.pathname === "/" && !target.search, { timeout: 15000 });
+    await page.goto("/login");
+    await page.getByLabel("邮箱").fill(otherEmail);
+    await page.getByLabel("密码").fill(password);
+    await page.getByRole("button", { name: "登录", exact: true }).click();
+    await page.waitForURL((target) => target.pathname === "/", { timeout: 15000 });
+    const privateUrl = `${new URL(page.url()).origin}/api/projects/${projectId}/thumbnail?version=4`;
+    const deniedImageResponse = page.waitForResponse((response) => response.url() === privateUrl);
+    expect(await page.evaluate((url) => new Promise<string>((resolve) => {
+      const img = new Image(); img.onload = () => resolve("loaded"); img.onerror = () => resolve("denied");
+      img.src = url; document.body.append(img);
+    }), privateUrl)).toBe("denied");
+    expect((await deniedImageResponse).status()).toBe(404);
+    expect(failures).toEqual([`404 ${privateUrl}`]);
+    expect(errors.filter((message) => !message.includes("404"))).toEqual([]);
   } finally {
     // 只清理本用例新建的项目/用户；其他真实用户与项目保持不变。
     const { error: deleteProjectError } = await admin.from("projects").delete().eq("id", projectId);
@@ -142,6 +180,9 @@ test("真实数据库历史回滚、iframe、刷新及恢复后继续修改同�
       if (name === projectId || name.startsWith(`restore-${projectId}-`)) {
         await rm(join(GENERATED_ROOT, name), { recursive: true, force: true });
       }
+    }
+    for (const name of await readdir(join(GENERATED_ROOT, ".thumbnails")).catch(() => [])) {
+      if (name.startsWith(`${projectId}-`)) await rm(join(GENERATED_ROOT, ".thumbnails", name));
     }
   }
 });

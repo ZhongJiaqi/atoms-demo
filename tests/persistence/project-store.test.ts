@@ -208,7 +208,7 @@ test("数据库记录恢复为 Agent 可继续修改的原始状态和源码", (
 test("历史项目倒序查询且恢复读取全部持久化实体", async () => {
   const calls: string[] = [];
   const rows: Record<string, unknown> = {
-    projects: [{ id: "project-1", name: "Todo", summary: "", current_version: 1, created_at: "a", updated_at: "b" }],
+    projects: [{ id: "project-1", name: "Todo", summary: "", current_version: 1, created_at: "a", updated_at: "b" }, { id: "draft-1", name: "正在创建项目", current_version: 0 }],
     messages: [],
     project_files: [{ path: "src/App.tsx", content: "code" }, { path: "src/styles.css", content: "css" }],
     agent_runs: [],
@@ -234,6 +234,7 @@ test("历史项目倒序查询且恢复读取全部持久化实体", async () =>
 
   const projects = await listUserProjects(client);
   assert.equal(projects[0]?.id, "project-1");
+  assert.deepEqual(projects.map((project) => project.id), ["project-1"], "未构建成功的草稿不应出现在项目列表，记录仍保留");
   assert.ok(calls.includes("order:projects:updated_at:false"));
 
   const bundle = await loadPersistedProject(client, "project-1");

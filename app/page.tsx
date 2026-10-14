@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
+import { FormEvent, type KeyboardEvent as ReactKeyboardEvent, useEffect, useMemo, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 
 type TimelineItem = {
@@ -91,6 +91,12 @@ const EVENT_LABELS: Record<string, string> = {
 const MIN_CREATE_PROMPT_LENGTH = 4;
 const MIN_MODIFY_PROMPT_LENGTH = 2;
 
+function composerKeyDown(event: ReactKeyboardEvent<HTMLTextAreaElement>) {
+  if (event.key !== "Enter" || event.shiftKey || event.nativeEvent.isComposing || event.keyCode === 229) return;
+  event.preventDefault();
+  event.currentTarget.form?.requestSubmit();
+}
+
 const AGENT_FACES = ["🧑🏻‍💻", "🧑🏼‍🎨", "🧑🏽‍🔬", "🧑🏻‍🚀", "🧑🏾‍💼", "🧑🏼‍🔧", "🧑🏽‍🏫", "🧑🏻‍🚀"];
 
 function parseBlock(block: string) {
@@ -114,11 +120,18 @@ function Logo({ compact = false }: { compact?: boolean }) {
   );
 }
 
+function ProjectCover({ project }: { project: ProjectSummary }) {
+  const [status, setStatus] = useState<"loading" | "ready" | "error">("loading");
+  return <div className="home-project-cover" data-status={status}>
+    {status !== "error" ? <img alt={`${project.name}最新版本的应用主页`} src={`/api/projects/${project.id}/thumbnail?version=${project.current_version}`} data-project-id={project.id} data-version={project.current_version} loading="lazy" onLoad={() => setStatus("ready")} onError={() => setStatus("error")} /> : null}
+    {status !== "ready" ? <span>{status === "error" ? "封面暂不可用，点击打开项目" : "正在准备应用主页…"}</span> : null}
+  </div>;
+}
+
 function LandingPage({
   requirement,
   setRequirement,
   submit,
-  openHistory,
   projects,
   signedIn,
   projectsLoading,
@@ -128,7 +141,6 @@ function LandingPage({
   requirement: string;
   setRequirement: (value: string) => void;
   submit: (event: FormEvent) => void;
-  openHistory: () => void;
   projects: ProjectSummary[];
   signedIn: boolean;
   projectsLoading: boolean;
@@ -139,16 +151,14 @@ function LandingPage({
     <main className="landing-page">
       <nav className="landing-nav" aria-label="主导航">
         <Logo />
-        <div className="landing-links" aria-label="产品导航">
-          <span>资源⌄</span><span>社区</span><span>关于</span><span>定价</span>
-        </div>
+        <div className="landing-links">AI 应用工作台</div>
         <div className="landing-auth">
           {signedIn ? <button className="soft-button" onClick={logout} type="button">退出登录</button> : <><a className="soft-button" href="/login">登录</a><a className="primary-button" href="/login?mode=register">注册</a></>}
         </div>
       </nav>
 
       <section className="landing-hero" id="hero">
-        <div className="notice-pill"><span>Notice</span><i />Atoms Demo 已支持真实生成与多轮修改<b>×</b></div>
+        <div className="notice-pill"><span>Atoms Demo</span><i />真实生成 · 多轮修改 · 安全预览</div>
         <div className="agent-stack" aria-label="AI 智能体团队">
           {AGENT_FACES.map((face, index) => <span key={`${face}-${index}`}>{face}</span>)}
         </div>
@@ -161,24 +171,25 @@ function LandingPage({
             id="hero-requirement"
             maxLength={2000}
             onChange={(event) => setRequirement(event.target.value)}
+            onKeyDown={composerKeyDown}
             placeholder="例如：创建一个支持优先级和深色模式的 Todo App"
             rows={3}
             value={requirement}
           />
           <div className="hero-composer-actions">
-            <button aria-label="添加附件" className="circle-button" type="button">＋</button>
+            <span className="composer-hint"><span>Enter 发送</span><span>Shift+Enter 换行</span></span>
             <button className="start-button" disabled={requirement.trim().length < MIN_CREATE_PROMPT_LENGTH} type="submit">
               开始 <span>→</span>
             </button>
           </div>
         </form>
         <section className="home-projects" aria-label="我的项目">
-          <header><h2>我的项目</h2><button aria-label="历史项目" onClick={openHistory} type="button">查看历史项目 ↗</button></header>
+          <header><h2>我的项目</h2></header>
           {historyError ? <p className="home-projects-empty" role="alert">{historyError}</p> : projectsLoading ? <p className="home-projects-empty" role="status">正在读取你的项目…</p> : signedIn && projects.length ? (
             <div className="home-project-grid">{projects.map((project) => (
               <a className="home-project-card" href={`/?project=${project.id}`} key={project.id}>
-                <div className="home-project-cover" aria-hidden="true">‹/›</div>
-                <h3>{project.name}</h3><p>{project.summary || "尚未生成成功版本"}</p><small>v{project.current_version} · {new Date(project.updated_at).toLocaleString("zh-CN")}</small>
+                <ProjectCover key={`${project.id}-${project.current_version}`} project={project} />
+                <h3>{project.name}</h3><p>{project.summary || "尚未生成成功版本"}</p><small>最近更新 · {new Date(project.updated_at).toLocaleString("zh-CN")}</small>
               </a>
             ))}</div>
           ) : <p className="home-projects-empty">{signedIn ? "还没有项目，描述你的想法开始创建。" : "登录后，你的项目会出现在这里。"}</p>}
@@ -267,6 +278,9 @@ export default function CodingAgentPage() {
   const [projectsLoading, setProjectsLoading] = useState(false);
   const [historyError, setHistoryError] = useState("");
   const chatEndRef = useRef<HTMLDivElement>(null);
+  const versionPanelRef = useRef<HTMLElement>(null);
+  const restoringVersionRef = useRef(restoringVersion);
+  restoringVersionRef.current = restoringVersion;
 
   const latestTurn = turns.at(-1);
   const isWorkspace = turns.length > 0;
@@ -285,8 +299,31 @@ export default function CodingAgentPage() {
     })();
   }, []);
 
+
   useEffect(() => {
-    if (isWorkspace) chatEndRef.current?.scrollIntoView({ block: "end", behavior: "smooth" });
+    if (!versionHistoryOpen) return;
+    const previous = document.activeElement as HTMLElement | null;
+    const panel = versionPanelRef.current;
+    panel?.querySelector<HTMLButtonElement>('button[aria-label="关闭历史记录"]')?.focus();
+    function onKey(event: KeyboardEvent) {
+      if (event.key === "Escape" && restoringVersionRef.current === null) setVersionHistoryOpen(false);
+      if (event.key !== "Tab" || !panel) return;
+      const controls = [...panel.querySelectorAll<HTMLElement>('button:not(:disabled), a[href], input, [tabindex="0"]')];
+      const first = controls[0]; const last = controls.at(-1);
+      if (!first || !last) { event.preventDefault(); return; }
+      if (event.shiftKey && (document.activeElement === first || !panel.contains(document.activeElement))) { event.preventDefault(); last.focus(); }
+      else if (!event.shiftKey && (document.activeElement === last || !panel.contains(document.activeElement))) { event.preventDefault(); first.focus(); }
+    }
+    document.addEventListener("keydown", onKey);
+    return () => { document.removeEventListener("keydown", onKey); previous?.focus(); };
+  }, [versionHistoryOpen]);
+
+  useEffect(() => {
+    if (restoringVersion !== null) versionPanelRef.current?.focus();
+  }, [restoringVersion]);
+
+  useEffect(() => {
+    if (isWorkspace) chatEndRef.current?.scrollIntoView({ block: "end", behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
   }, [isWorkspace, latestTurn?.timeline.length, latestTurn?.status]);
 
   useEffect(() => {
@@ -410,8 +447,13 @@ export default function CodingAgentPage() {
   }
 
   async function logout() {
-    await fetch("/auth/logout", { method: "POST" });
-    window.location.assign("/");
+    try {
+      const response = await fetch("/auth/logout", { method: "POST" });
+      if (!response.ok) throw new Error("退出登录失败，请稍后重试。");
+      window.location.assign("/");
+    } catch {
+      setNotice("退出登录失败，请稍后重试。");
+    }
   }
 
   async function loadVersionHistory() {
@@ -535,7 +577,9 @@ export default function CodingAgentPage() {
     setViewerMode("preview");
     setSaveStatus("idle");
     window.history.replaceState(null, "", "/");
+    if (signedIn) void loadProjectHistory(false);
   }
+
 
   const projectHistory = historyOpen ? (
     <aside className="project-history" aria-label="历史项目">
@@ -570,7 +614,7 @@ export default function CodingAgentPage() {
   }
 
   if (!isWorkspace) {
-    return <><LandingPage requirement={requirement} setRequirement={setRequirement} submit={submit} openHistory={() => void loadProjectHistory()} projects={projects} signedIn={signedIn} projectsLoading={projectsLoading} historyError={historyError} logout={() => void logout()} /><div className="landing-project-history">{projectHistory}</div></>;
+    return <><LandingPage requirement={requirement} setRequirement={setRequirement} submit={submit} projects={projects} signedIn={signedIn} projectsLoading={projectsLoading} historyError={historyError} logout={() => void logout()} />{notice ? <div className="workspace-toast" role="status">{notice}</div> : null}</>;
   }
 
   return (
@@ -578,17 +622,18 @@ export default function CodingAgentPage() {
       <aside className="global-rail" aria-label="全局导航">
         <Logo compact />
         <div className="rail-actions">
-          <button aria-label="新建项目" disabled={running} onClick={startNewProject} title="新建项目" type="button">＋</button>
-          <button aria-label="历史项目" className="is-active" onClick={() => void loadProjectHistory()} title="历史项目" type="button">◇</button>
-          <button aria-label="项目文件" onClick={() => { setViewerMode("code"); setMobilePane("viewer"); }} title="项目文件" type="button">▱</button>
+          <button aria-label="新建项目" data-tooltip="新建项目" disabled={running} onClick={startNewProject} type="button">＋</button>
+          <button aria-label="历史项目" data-tooltip="我的项目" onClick={() => void loadProjectHistory()} type="button">◇</button>
+          <button aria-label="项目文件" data-tooltip="查看源码" onClick={() => { setViewerMode("code"); setMobilePane("viewer"); }} type="button">▱</button>
+          <button aria-label="历史记录" className="mobile-history-button" data-tooltip="历史版本" onClick={() => void loadVersionHistory()} type="button">↶</button>
         </div>
         <span className="rail-spacer" />
-        <button aria-label="退出登录" className="account-button" onClick={() => void logout()} title="退出登录" type="button">J</button>
+        <button aria-label="退出登录" data-tooltip="退出登录" className="account-button" onClick={() => void logout()} type="button">◉</button>
       </aside>
 
       <header className="chat-header">
         <div><strong>{result?.projectName || "正在创建项目"}</strong><span>⌄</span></div>
-        <div className="chat-header-actions"><button aria-label="历史记录" onClick={() => void loadVersionHistory()} type="button">↶</button><button aria-label="收起对话" onClick={() => setNotice("移动端可通过底部标签切换，桌面折叠将在下一阶段开放")} type="button">≪</button></div>
+        <div className="chat-header-actions"><button aria-label="历史记录" data-tooltip="历史版本" onClick={() => void loadVersionHistory()} type="button">↶</button></div>
       </header>
 
       <header className="viewer-header">
@@ -597,9 +642,7 @@ export default function CodingAgentPage() {
           <button aria-selected={viewerMode === "code"} onClick={() => setViewerMode("code")} role="tab" type="button">‹/› 代码</button>
         </div>
         <div className="workspace-actions">
-          {running ? <button className="follow-button" type="button">跟随智能体</button> : null}
-          <button onClick={() => { void navigator.clipboard.writeText(window.location.href); setNotice("项目链接已复制"); }} type="button">分享</button>
-          <button className="publish-button" disabled={running || !result} onClick={() => result && window.open(result.previewUrl, "_blank", "noopener,noreferrer")} type="button">发布</button>
+          <span className="workspace-save-label">{running ? "正在执行" : "安全预览"}</span>
         </div>
       </header>
 
@@ -622,17 +665,18 @@ export default function CodingAgentPage() {
             id="workspace-requirement"
             maxLength={2000}
             onChange={(event) => setRequirement(event.target.value)}
+            onKeyDown={composerKeyDown}
             placeholder={result ? "让智能体继续修改…" : "正在创建首个版本…"}
             rows={3}
             value={requirement}
           />
           <div>
-            <button aria-label="添加附件" className="circle-button" type="button">＋</button>
+            <span className="composer-mark" aria-hidden="true">✦</span>
             <span>{result ? `v${result.version} · ${result.projectId.slice(0, 8)}` : "真实模型与沙盒构建"}</span>
             {running ? (
               <button aria-label="任务运行中" className="stop-button" onClick={() => setNotice("任务正在受控沙盒中执行，请等待本轮结算")} type="button">■</button>
             ) : (
-              <button aria-label="发送修改需求" className="send-button" disabled={restoringVersion !== null || requirement.trim().length < MIN_MODIFY_PROMPT_LENGTH} type="submit">↑</button>
+              <button aria-label="发送修改需求" data-tooltip="发送 · Enter" className="send-button" disabled={restoringVersion !== null || requirement.trim().length < MIN_MODIFY_PROMPT_LENGTH} type="submit">↑</button>
             )}
           </div>
         </form>
@@ -642,12 +686,12 @@ export default function CodingAgentPage() {
         <div className="app-viewer-shell">
           <div className="app-viewer-toolbar">
             <div className="device-controls">
-              <button aria-label="桌面预览" className={previewDevice === "desktop" ? "is-active" : ""} onClick={() => setPreviewDevice("desktop")} type="button">▱</button>
-              <button aria-label="手机预览" className={previewDevice === "mobile" ? "is-active" : ""} onClick={() => setPreviewDevice("mobile")} type="button">▯</button>
+              <button aria-label="桌面预览" data-tooltip="桌面尺寸" className={previewDevice === "desktop" ? "is-active" : ""} onClick={() => setPreviewDevice("desktop")} type="button">▱</button>
+              <button aria-label="手机预览" data-tooltip="手机尺寸" className={previewDevice === "mobile" ? "is-active" : ""} onClick={() => setPreviewDevice("mobile")} type="button">▯</button>
             </div>
-            <button aria-label="刷新预览" onClick={() => setRefreshKey((value) => value + 1)} type="button">↻</button>
+            <button aria-label="刷新预览" data-tooltip="刷新预览" onClick={() => setRefreshKey((value) => value + 1)} type="button">↻</button>
             <div className="route-select"><span>⌂</span><b>Home</b><i>⌄</i></div>
-            {result ? <a aria-label="在新标签页打开" href={result.previewUrl} rel="noreferrer" target="_blank">↗</a> : <span />}
+            {result ? <a aria-label="在新标签页打开" data-tooltip="独立打开预览" href={result.previewUrl} rel="noreferrer" target="_blank">↗</a> : <span />}
             <button className={consoleOpen ? "is-active" : ""} onClick={() => setConsoleOpen((value) => !value)} type="button">‹› 控制台</button>
           </div>
 
@@ -704,7 +748,7 @@ export default function CodingAgentPage() {
 
       {versionHistoryOpen ? (
         <div className="version-history-backdrop" onClick={() => restoringVersion === null && setVersionHistoryOpen(false)}>
-          <section className="version-history-panel" role="dialog" aria-modal="true" aria-label="历史记录" onClick={(event) => event.stopPropagation()}>
+          <section ref={versionPanelRef} tabIndex={-1} className="version-history-panel" role="dialog" aria-modal="true" aria-label="历史记录" onClick={(event) => event.stopPropagation()}>
             <header><h2>历史记录</h2><button aria-label="关闭历史记录" disabled={restoringVersion !== null} onClick={() => setVersionHistoryOpen(false)} type="button">×</button></header>
             <div className="version-history-tabs"><span>版本</span></div>
             <div className="version-history-list">

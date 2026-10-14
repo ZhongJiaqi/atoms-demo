@@ -10,7 +10,7 @@
     "build": "next build",
     "start": "next start",
     "typecheck": "tsc --noEmit",
-    "test:unit": "node --test tests/auth/auth-boundaries.test.ts tests/agent/source-paths.test.ts tests/persistence/project-store.test.ts tests/persistence/restore-version.test.ts tests/persistence/sandbox-restore.test.ts tests/persistence/schema.test.mjs",
+    "test:unit": "node --test tests/auth/auth-boundaries.test.ts tests/agent/source-paths.test.ts tests/persistence/project-store.test.ts tests/persistence/restore-version.test.ts tests/persistence/sandbox-restore.test.ts tests/persistence/schema.test.mjs tests/persistence/thumbnail-queue.test.ts tests/persistence/thumbnail-cache.test.ts",
     "test:e2e:install": "playwright install chromium",
     "test:e2e:representative": "playwright test tests/e2e/representative-apps.spec.ts",
     "test:e2e:phase2": "playwright test tests/e2e/phase2-auth-persistence.spec.ts",
