@@ -49,7 +49,7 @@ export default function LoginPage() {
   return (
     <main className="auth-page">
       <section className="auth-card">
-        <a className="auth-brand" href="/" aria-label="返回 Atoms 首页"><span>◒</span>Atoms</a>
+        <a className="auth-brand" href="/" aria-label="返回 Atoms Demo 首页"><span>◒</span>Atoms Demo</a>
         <div className="auth-tabs" role="tablist" aria-label="认证方式">
           <button aria-selected={mode === "login"} onClick={() => setMode("login")} role="tab" type="button">登录</button>
           <button aria-selected={mode === "register"} onClick={() => setMode("register")} role="tab" type="button">注册</button>

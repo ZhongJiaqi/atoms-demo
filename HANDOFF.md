@@ -4,6 +4,8 @@
 
 ## 正式部署与线上验收进行中（以下旧记录为历史，不代表当前状态）
 
+- 用户新增品牌导航：首页及登录/注册可见品牌统一Atoms Demo；工作区compactlogo标准a href'/'支持Click/Enter返回真实首页、hover/focus提示、44px触控。生成或preview恢复中aria-disabled+preventDefault沿现有newProject门禁，避免误中断SSE；不clear存储、不删除项目/调用新generate。frontend-design保持原冷灰蓝布局，仅必要auto/nowrap/mobilelogo宽度。旧UI RED6cases+login1case，修改后root新build79757通过、production3010 session16464；品牌7+authnav4+workspace5 Playwright16/16通过，品牌所有case有0console/0>=400断言。root108/108unit、typecheck/build通过，桌面1470/手机320截图实际查看无品牌截断溢出，独立review Critical/Important0，恢复期单独test未覆盖属Minor。仅UI合同API/SSE fixture，不冒充真实模型/DB测试。正准备发布这两项UI，尚未上线新品牌；Agent/Auth/模型/env/lock未改。
+- 记账测试固化与结果报告已追加提交ee48a04并普通push成功25e0fda→ee48a04。原两commitbackup仍保留本地，Google暂缓文件仍untracked本地/部署排除，不删用户资料。
 - 最新：真实Expense复验63759完整passed1/failed0/skipped0/flaky0，temporaryUsers2/cleanupFailures0。录入/总额88.50/删除、iframe刷新及整页刷新数据保留、DB项目/最新version/messages/turns/files一致、console错误断言通过。三个代表case已分两轮全部取得通过结果（之前Task/Habit2pass+Expensefail，本次Expense1pass）；不伪称同一批3/3。expenseTotal仅测试定位器，优先testID，缺失时精确“总支出”标签parent，先strict标签拒重复并拒BODY/HTML/null避免读取其他区域金额。TDD两轮RED→GREEN，root fresh静态6/6+typecheck0，独立review Important1关闭。未改生产Agent/Prompt/模型策略或环境。
 - 用户允许整理后已保留backup/local-pre-push-20261014，原两未公开commit以ea63edb为父整理为25e0fda；假PAT改运行时synthetic构造，gitleaks全5commit0。git普通push已成功4c8843a→25e0fda，无force/无bypass，远端GitHub核心云代码已同步。新增定位器及本次验收报告待追加测试commit。
 - 公开新用户邮箱确认仍需SMTP（确认不关闭）；仅只读ai-news-radar/.env.local变量名未发现SMTP/Resend/Brevo等配置，无值输出/修改。已异步询问用户已有邮箱/发信服务名称，不在聊天索密钥。下一步由服务类型提供具体步骤/安全配置及实际注册收信验证。Google依旧暂缓，未启用；真实PNG/失败任务持久化/统一读取snapshot/孤儿GC/大陆真机网络尚未完成。

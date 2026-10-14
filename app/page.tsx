@@ -119,9 +119,9 @@ function parseBlock(block: string) {
 
 function Logo({ compact = false }: { compact?: boolean }) {
   return (
-    <span className={`atoms-logo ${compact ? "is-compact" : ""}`} aria-label="Atoms">
+    <span className={`atoms-logo ${compact ? "is-compact" : ""}`} aria-label="Atoms Demo">
       <i /><i /><i />
-      {!compact ? <b>Atoms</b> : null}
+      {!compact ? <b>Atoms Demo</b> : null}
     </span>
   );
 }
@@ -370,6 +370,7 @@ export default function CodingAgentPage() {
     onResumed: (url) => setResult((current) => current && current.projectId === result?.projectId && current.version === result.version ? { ...current, previewUrl: url, previewReady: true, previewError: undefined } : current),
     onVersionChanged: restoreWorkspace,
   });
+  const homeNavigationBlocked = running || preview.status === "restoring";
 
   useEffect(() => {
     void (async () => {
@@ -703,7 +704,10 @@ export default function CodingAgentPage() {
   return (
     <main className="workspace-shell">
       <aside className="global-rail" aria-label="全局导航">
-        <Logo compact />
+        <a className="brand-home" href="/" aria-label="Atoms Demo，返回首页" aria-disabled={homeNavigationBlocked || undefined}
+          title={homeNavigationBlocked ? "生成或恢复完成后返回首页" : "返回首页"}
+          data-tooltip={homeNavigationBlocked ? "生成或恢复完成后返回首页" : "返回首页"}
+          onClick={event => { if (homeNavigationBlocked) event.preventDefault(); }}><Logo compact /></a>
         <div className="rail-actions">
           <button aria-label="新建项目" data-tooltip="新建项目" disabled={running || preview.status === "restoring"} onClick={startNewProject} type="button"><WorkspaceIcon name="plus" /></button>
           <button aria-label="历史项目" data-tooltip="我的项目" onClick={() => { setMobilePane("chat"); void loadProjectHistory(); }} type="button"><WorkspaceIcon name="projects" /></button>
