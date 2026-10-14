@@ -1,5 +1,7 @@
 import { expect, test, type Page } from "@playwright/test";
 
+test.use({ actionTimeout: 30_000 });
+
 const REQUIRED_ENV = ["E2E_PRIMARY_EMAIL", "E2E_PRIMARY_PASSWORD", "E2E_OTHER_EMAIL", "E2E_OTHER_PASSWORD"] as const;
 const missingEnvironment = REQUIRED_ENV.filter((name) => !process.env[name]);
 const GENERATION_TIMEOUT = 6 * 60 * 1000;
@@ -52,12 +54,14 @@ test.describe("Phase 2 真实认证、持久化与恢复", () => {
     const otherPassword = process.env.E2E_OTHER_PASSWORD!;
     const consoleErrors: string[] = [];
     const failedResponses: string[] = [];
+    let testingIsolation = false;
     page.on("console", (message) => {
       if (message.type() === "error") consoleErrors.push(message.text());
     });
     page.on("pageerror", (error) => consoleErrors.push(error.message));
     page.on("response", (response) => {
-      const expectedIsolationDenial = response.status() === 403 && response.url().endsWith("/api/generate");
+      const expectedIsolationDenial = testingIsolation && [403, 404].includes(response.status()) &&
+        (response.url().endsWith("/api/generate") || /\/api\/projects\/[0-9a-f-]{36}$/.test(response.url()));
       if (response.status() >= 400 && !expectedIsolationDenial) {
         failedResponses.push(`${response.status()} ${response.url()}`);
       }
@@ -91,19 +95,19 @@ test.describe("Phase 2 真实认证、持久化与恢复", () => {
 
     await logout(page);
     await login(page, primaryEmail, primaryPassword);
-    await page.getByRole("button", { name: "历史项目" }).click();
-    await expect(page.locator(".project-history")).toContainText("Todo");
-    await page.locator(`.project-history a[href="/?project=${projectId}"]`).click();
+    await page.locator(`.home-projects a[href="/?project=${projectId}"]`).click();
     await expect(page.getByTestId("generated-preview")).toHaveAttribute("data-project-id", projectId);
 
     await logout(page);
     await login(page, otherEmail, otherPassword);
+    testingIsolation = true;
     const foreignRead = await page.request.get(`/api/projects/${projectId}`);
     expect([403, 404]).toContain(foreignRead.status());
     const foreignModify = await page.request.post("/api/generate", {
       data: { projectId, requirement: "不能修改别人的项目" },
     });
     expect([403, 404]).toContain(foreignModify.status());
+    testingIsolation = false;
 
     await logout(page);
     await login(page, primaryEmail, primaryPassword, `/?project=${projectId}`);

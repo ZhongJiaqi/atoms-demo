@@ -1,13 +1,98 @@
 <!doctype html>
-<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Atoms Demo · 云端接入进度</title>
-<style>body{margin:0;background:#f5f7fb;color:#20304b;font:15px/1.8 system-ui,-apple-system,"PingFang SC",sans-serif}main{max-width:920px;margin:40px auto;padding:0 20px}h1{font-size:30px;letter-spacing:-.04em}h2{font-size:18px}section{background:white;border:1px solid #e0e7f3;border-radius:16px;padding:22px;margin:16px 0}.status{color:#315efb;font-weight:600}.muted{color:#6d7b93}table{width:100%;border-collapse:collapse}td,th{text-align:left;vertical-align:top;border-bottom:1px solid #e8edf5;padding:12px}code{font-size:13px;background:#edf2fa;padding:2px 6px;border-radius:5px}a{color:#315efb}@media(max-width:600px){main{margin:20px auto}section{padding:16px}table{font-size:12px}td,th{padding:8px}}</style></head>
-<body><main><p class="status">2026-10-14 · 本地与云基础通过，尚未上线</p><h1>Atoms Demo 云端接入进度</h1>
-<section><h2>历史记录：重设计已验证</h2><p>移除大号版本占位图；版本号只在标题旁显示一次。项目名称、两行摘要、时间、当前状态与恢复操作形成清晰层级，支持桌面与320/375px窄屏、44px按钮、键盘关闭及原有回滚。</p><p class="muted">使用 frontend-design 保持原冷灰/蓝色风格，不重做工作区、不改变模型策略。当前本地体验：<a href="http://localhost:3010">localhost:3010</a>。</p></section>
-<section><h2>三条并行任务的结果</h2><table><tr><th>任务</th><th>已验证</th><th>仍未完成</th></tr>
-<tr><td>历史记录与宿主UI</td><td>新版样式；无预览URL时保留已保存项目，不崩溃；浏览器回归</td><td>线上与真实手机网络验收</td></tr>
-<tr><td>云Agent接入</td><td>真实模型/SDK/Storage/RPC创建v1及同项目修改v2；代码、四条消息、两次执行及产物读取</td><td>线上HTTP与iframe整链；云失败任务持久化；真实云封面</td></tr>
-<tr><td>数据库、安全与预览基础</td><td>私有Storage、RLS、项目租约、旧任务拒绝、PT409修复；签名/网关/域名隔离契约</td><td>Token实际权限、自动域名绑定及测试部署；统一快照和孤儿清理</td></tr></table></section>
-<section><h2>验证数字与边界</h2><p><strong>84项单元通过；生产构建通过；Playwright 29通过、5跳过、0失败。</strong>跳过的是缺少专用邮箱配置的完整认证/三代表性应用用例，不能算通过。</p><p>真实云Agent Node集成1/1（86.58秒）、真实云基础DB1/1（10.515秒）。iframe渲染、localStorage刷新和跨项目Origin隔离使用明确契约样本，不冒充线上AI验收。</p><p>初次DB测试确实失败：错误码40001触发反复重试。已新增forward迁移改为PT409，没有重写已部署迁移或删除真实项目。</p></section>
-<section><h2>部署前需要确认</h2><ol><li>允许首次Vercel Preview测试部署，验证实际Token权限、域名和iframe；不切生产域名、不购买域名或升级套餐。</li><li>允许定向修复PostCSS至8.5.30、sharp至0.35.5并更新锁文件，保留Next15.5.27，之后重跑构建与回归。</li></ol><p>另需服务端随机签名密钥 <code>ATOMS_PREVIEW_GRANT_SECRET</code> 和 <code>APP_PUBLIC_ORIGIN</code>。Token已Sensitive配置到Production/Preview，元数据确认仅限Atoms；密钥值及实际权限尚未通过运行时测试。</p></section>
-<section><h2>不能宣称已完成的部分</h2><p>运行时目前只核验已有预览域名，不自动绑定；新域名缺失会诚实显示预览不可用。GET→POST域名归属检查非原子，未实测项目限定Token前不得开放自动绑定。产物内嵌渲染适用当前受控单入口Vite项目，不保证动态分包、Worker或任意相对运行时资源兼容。</p><p class="muted">未正式部署、未升级付费、未修改本地环境文件、未访问或修改ai-news-radar数据。大陆访问仍须实测。</p></section>
-</main></body></html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Atoms Demo · 云端接入进度</title>
+<style>
+body{margin:0;background:#f5f7fb;color:#20304b;font:15px/1.8 system-ui,-apple-system,"PingFang SC",sans-serif}
+main{max-width:920px;margin:40px auto;padding:0 20px}h1{font-size:30px;letter-spacing:-.04em}h2{font-size:18px}
+section,details{background:white;border:1px solid #e0e7f3;border-radius:16px;padding:22px;margin:16px 0}
+.status{color:#315efb;font-weight:600}.pending{color:#916515;font-weight:600}.muted{color:#6d7b93}
+table{width:100%;border-collapse:collapse}td,th{text-align:left;vertical-align:top;border-bottom:1px solid #e8edf5;padding:12px}
+code{font-size:13px;background:#edf2fa;padding:2px 6px;border-radius:5px;overflow-wrap:anywhere}a{color:#315efb}summary{cursor:pointer;font-weight:650}
+@media(max-width:600px){main{margin:20px auto}section,details{padding:16px}table{font-size:12px}td,th{padding:8px}}
+</style>
+</head>
+<body>
+<main>
+<p class="status">2026-10-14 · 主站已上线，真实Todo Phase 2流程已通过</p>
+<h1>Atoms Demo 云端接入进度</h1>
+<section>
+<h2>当前正式版本</h2>
+<p><a href="https://atoms-demo-jiaqi.vercel.app">https://atoms-demo-jiaqi.vercel.app</a></p>
+<p>正式部署 <code>dpl_8u49EVVJXcrQaZbqg2SStB4wyJQi</code> 已确认 READY，发布源文件143项；真实主站 GET 返回200及HTML。此版本包含旧版本云封面的诚实占位修复。</p>
+<p class="pending">真实Todo完整链路已通过；三个代表应用本轮2通过、1失败，记账后续仍需复验。不能写为3/3通过。</p>
+</section>
+<section>
+<h2>最新证据与实际边界</h2>
+<table>
+<thead><tr><th>检查</th><th>实际结果</th><th>可以证明什么</th></tr></thead>
+<tbody>
+<tr><td>默认单元与类型检查</td><td>108项通过；typecheck退出码0</td><td>当前代码回归通过，不代替真实线上流程。</td></tr>
+<tr><td>匿名预览诊断</td><td>真实HTTP200；明确诊断fixture HTML可读取</td><td>域名、grant与网关可传递诊断产物。fixture不是AI生成结果，也不证明真实应用交互。</td></tr>
+<tr><td>真实Todo Phase 2正式流程</td><td>1 passed / 0 failed / 0 skipped / 0 flaky；临时账号2个，清理失败0</td><td>v1→v2→v3同项目、刷新/重登恢复与跨账号拒绝均通过；不含真实邮件注册或所有功能按钮独立验证。</td></tr>
+<tr><td>生产API网络传输回归</td><td>先RED：10秒超时；修正后GREEN：1/1</td><td>精确正式主站请求复用既有代理；修复后真实Todo Phase 2重跑已成功。</td></tr>
+<tr><td>三个代表应用</td><td>2 passed / 1 failed；临时账号2个，清理失败0</td><td>任务与习惯通过；记账首条金额正常，缺少总额testID导致定位失败，后续删除/刷新未执行。</td></tr>
+<tr><td>云封面</td><td>缺PNG显示200 SVG，明确“封面暂未生成”</td><td>正常浏览不因缺封面产生503；这不是实际应用截图。</td></tr>
+</tbody>
+</table>
+</section>
+<section>
+<h2>真实Todo Phase 2正式流程已通过</h2>
+<p>本次正式线上用例取得1 passed、0 failed、0 skipped、0 flaky。v1创建后实际添加任务，刷新预览仍保留任务；同项目完成深色模式修改轮次v2，整页刷新保留两轮聊天；退出并重新登录后，从首页项目卡片恢复同一项目。</p>
+<p>第二账号读取及修改原用户项目分别被403/404拒绝；原用户随后恢复v2，完成优先级修改轮次v3，projectId不变且聊天增加到三轮。正常操作没有非预期console或network错误；账号隔离用例中的403/404是明确预期的拒绝。两个临时账号及其测试数据已清理，清理失败0。</p>
+<p>此前第104行第二账号请求30秒超时属于历史失败：直连超时、既有代理返回401的诊断帮助定位网络传输，新增spec先RED10秒再GREEN1/1，之后整条正式Todo用例重跑成功。该历史失败不再作为当前Phase 2结论。</p>
+<p class="pending">此次使用管理员预确认临时账号，未验证公众真实邮件注册；没有独立点击主题按钮或优先级按钮逐项断言。已通过的是生成、保存、多版本恢复及账号隔离链路，不能写成所有生成应用功能全面验收完成。</p>
+</section>
+<section>
+<h2>三个代表应用：本轮2通过、1失败</h2>
+<table>
+<thead><tr><th>应用</th><th>本次真实结果</th><th>仍需注意</th></tr></thead>
+<tbody>
+<tr><td>任务看板</td><td>CRUD、优先级、localStorage持久化及页面/代码一致性通过。</td><td>该代表用例通过，不等于所有任意生成应用均通过。</td></tr>
+<tr><td>习惯打卡</td><td>CRUD、完成进度及持久化通过。</td><td>本轮实际行为断言取得通过证据。</td></tr>
+<tr><td>个人记账</td><td>首条添加及item正常；截图实际总支出为¥88.50。</td><td>缺少<code>expense-total</code> testID，自动化在总额定位处失败；删除及刷新后续步骤未执行。</td></tr>
+</tbody>
+</table>
+<p>主Agent仅核对了该测试项目JSON源码与失败截图：Summary使用reduce/toFixed计算，页面实际总额¥88.50。当前证据显示失败点是总额定位标记缺失，而非统计函数损坏。已安排增加语义“总支出”标签定位fallback，并保留金额的严格断言；不改生产Agent或prompt，复验结果尚未取得。</p>
+<p>本轮合计2 passed、1 failed；使用两个临时账号，清理失败0。</p>
+</section>
+<section>
+<h2>已完成的云基础</h2>
+<table>
+<thead><tr><th>部分</th><th>已有证据</th><th>保留边界</th></tr></thead>
+<tbody>
+<tr><td>云Agent</td><td>真实Node集成曾完成模型、Vercel SDK构建、Storage及数据库同项目v1/v2；包含源码、聊天与执行记录。</td><td>Node集成不等于正式HTTP与浏览器完整验收。</td></tr>
+<tr><td>持久化与租约</td><td>私有Storage、RLS、项目租约；过期/旧令牌和版本冲突拒绝保存，失败时五表无变化。</td><td>通过新增forward迁移把业务冲突改为PT409，未重写已部署迁移。</td></tr>
+<tr><td>预览域名与网关</td><td>管理Token核验、生产domain登记与alias门禁已接入；签名绑定项目、版本、独立host及单对象URL。</td><td>匿名fixture HTTP200已实测；没有关闭全项目保护，也不放宽域名归属检查。</td></tr>
+<tr><td>宿主UI与恢复</td><td>无预览URL时仍保留已保存项目及代码入口；同项目恢复/历史回滚与本地链路保留。</td><td>内嵌资源渲染面向受控单入口Vite；分包、Worker和任意相对资源不保证兼容。</td></tr>
+</tbody>
+</table>
+</section>
+<section>
+<h2>认证与配置现状</h2>
+<p>Supabase正式Site URL为主站，允许主站与本地3010回调；邮箱确认保持开启。自定义SMTP尚未配置，因此公众新邮箱注册发信与真实收信验收仍未完成。管理员预确认临时测试账号只验证登录后的业务，不能代替注册发信测试。</p>
+<p>Google一键登录已按用户决定暂缓。未启用provider或部署Google产品入口，初步成果保存在 <code>docs/deferred/google-login/</code>，活动邮箱callback已恢复原行为。</p>
+<p>Next保持15.5.27；PostCSS和sharp已做授权范围内的定向修复，正式云安装及构建成功。本轮云代码尚未成功推送到GitHub。</p>
+</section>
+<section>
+<h2>远端同步：GitHub保护仍在生效</h2>
+<p>推送被GitHub GH013阻止：用于验证脱敏的测试fixture假PAT固定文本命中了平台格式扫描。此前gitleaks结果为0，不等于GitHub推送保护一定放行。</p>
+<p>主Agent已改为运行时构造合成测试值，相关回归6/6通过。尚未推送的两个提交仍含旧历史；正在等待用户批准先备份再整理这些未推送提交。没有绕过GitHub保护，没有force push，也没有把远端同步写成已完成。</p>
+</section>
+<section>
+<h2>仍未完成</h2>
+<p>记账总额定位修正后的完整复验；大陆真实网络验收；公众邮箱注册发信；Phase 2生成项目的主题/优先级按钮独立行为验证；真实云PNG封面；云失败任务持久化；统一恢复快照与孤儿产物GC；本轮代码远端同步仍未完成。</p>
+<p>生产runner使用临时账号并逐步清理。新日志脱敏对Cookie、Authorization和SSR编码的敏感诊断整条省略，避免复杂序列化漏出凭据；合成回归6/6通过，独立复审Critical 0 / Important 0。主Agent已完成正式Todo流程与本轮代表应用验收，记账复验结果尚未写为通过。</p>
+</section>
+<details>
+<summary>历史问题与旧证据：不作为当前阻塞结论</summary>
+<p>早期曾因Token权限核验未成立而拒绝绑定；后来又因预览alias触发平台SSO重定向导致iframe空白。这些属于历史阶段，当前生产domain登记和匿名fixture HTTP200已取得新证据，不能继续把“权限仍阻塞”写成当前结论。</p>
+<p>早期数据库错误码40001导致PostgREST反复重试，已有真实RED及PT409 forward修复记录。旧本地Playwright通过/跳过数字、云Node集成1/1及契约iframe测试均各有范围，不能替代最新正式业务用例结果。</p>
+<p>首次旧部署误传本地生成/测试文件，后续已用部署忽略规则排除；旧部署清理仍须按授权执行。没有上传.env或.env.local，没有修改其他项目业务数据或升级付费套餐。</p>
+</details>
+<p class="muted">本报告按已取得的证据更新，不预填尚未完成的新部署ID或测试结果。</p>
+</main>
+</body>
+</html>

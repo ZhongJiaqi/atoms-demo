@@ -1,9 +1,13 @@
 import { defineConfig } from "@playwright/test";
 import { existsSync } from "node:fs";
 
-if (existsSync(".env.local")) {
+if (process.env.ATOMS_E2E_SKIP_LOCAL_ENV !== "1" && existsSync(".env.local")) {
   process.loadEnvFile(".env.local");
 }
+
+const productionProxy = process.env.ATOMS_E2E_BASE_URL === "https://atoms-demo-jiaqi.vercel.app"
+  ? process.env.https_proxy || process.env.HTTPS_PROXY || process.env.http_proxy || process.env.HTTP_PROXY
+  : undefined;
 
 export default defineConfig({
   testDir: "./tests/e2e",
@@ -17,6 +21,7 @@ export default defineConfig({
     ["html", { open: "never", outputFolder: "playwright-report" }],
   ],
   use: {
+    ...(productionProxy ? { proxy: { server: productionProxy } } : {}),
     baseURL: process.env.ATOMS_E2E_BASE_URL || "http://localhost:3000",
     headless: process.env.HEADLESS === "true",
     screenshot: "only-on-failure",

@@ -1,5 +1,7 @@
 import { expect, test, type FrameLocator, type Page, type TestInfo } from "@playwright/test";
 
+test.use({ actionTimeout: 30_000 });
+
 const GENERATION_TIMEOUT = 6 * 60 * 1000;
 
 async function login(page: Page) {

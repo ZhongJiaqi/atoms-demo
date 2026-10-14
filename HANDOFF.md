@@ -2,6 +2,58 @@
 
 更新时间：2026-10-14（Asia/Shanghai）
 
+## 正式部署与线上验收进行中（以下旧记录为历史，不代表当前状态）
+
+- 用户已明确允许“整理并推送”：本地backup/local-pre-push-20261014已保留原56396b4及e1a241b历史；计划仅合并这两条未公开commit并移除假PAT，父commit仍ea63edb（沿已有远端main正常fastforward），不force、不改已公开历史。真实记账语义定位回归并行进行，尚未重跑记账。
+- 正式代表应用55835结果2通过/1失败，临时用户2/清理失败0：任务管理、习惯打卡通过；个人记账添加条目通过后缺expense-total测试标识，30s locator断言失败，删除/刷新后续未执行。实际失败PNG可见总支出¥88.50；仅读取本次临时项目API响应源码确认Summary reduce+toFixed正确且未加testID。准备语义“总支出”标签定位兼容，金额/删除/刷新断言保持，不改Agent或Prompt，不把定位失败冒称功能已完整验收。
+- 用户已批准推送云代码；实际git push被GitHub GH013阻止（远端未更新）：e1a241b/56396b4测试文件内手写假PAT符合格式，非真实凭据。gitleaks六commit扫描0但GitHub模式更严格；fixture已改运行时构造synthetic值，helper6/6通过。已再请求允许保留本地backup并整理未推送两commit再push，待答复，不绕过保护/不force/不改remotehistory。当前本地main56396b4，远端main仍4c8843a，未提交fixture修正和报告增量。
+- 最新真实正式Phase2会话32869已完整通过：passed1/failed0/skipped0/flaky0，临时用户2/cleanupFailures0。使用真实模型、VercelSandbox、DB和privateartifact；Todo v1真实添加/刷新保留、深色v2/页面刷新同项目及chat2、退出重登卡片恢复、第二账号GET/修改403或404拒绝、原账号再恢复v2→优先级v3同项目/chat3，正常浏览器console/network断言均通过。此用例不包含真实邮件注册和主题按钮/优先级按钮额外功能断言，不扩张验收结论。开始三个代表应用正式验收，尚未有结果。
+- 本轮正式发布dpl_8u49EVVJXcrQaZbqg2SStB4wyJQi已READY（143源文件、云端Next15.5.27构建/typecheck通过），已包含旧本地项目thumbnail修复。主站仍atoms-demo-jiaqi.vercel.app。根因transport回归1/1通过后，真实Phase2待runner脱敏复审通过再继续；不提前写功能全过。
+- runner脱敏复审发现quoted chunk/双序列化JSON/header数组遗漏，已采用最小failclosed整条省略而非扩充序列化解析器；synthetic先RED→GREEN，独立复审Important1关闭。root fresh108/108+typecheck0；独立domain审查20/20无Critical/Important。真实Phase2新会话32869已重新启动，仍在运行，未提前宣布通过。主站freshGET200HTMLtrue。
+- 最新Phase2会话51636整体失败0通过/1失败、临时账号2清理失败0；脱敏trace定位line104第二账号APIRequestContext.get超时。该行前真实Todo v1添加、预览刷新任务保留、深色v2、页面刷新同项目/聊天2/任务保留、退出重登卡片恢复均已走过；优先级v3与最终console/network断言未执行，不称整链通过。
+- 无凭据只读transport对比确证：Playwright直连正式API超时、显式复用现有代理返回401。新增production-transport.spec先RED10s超时；playwright.config仅精准正式baseURL时读取已有https/http代理，GREEN1/1，TLS/权限/模型策略未放宽，独立review Critical/Important0。原审批超时未执行，重试是只读请求，非服务故障。
+- runner failureSummary此前SSR base64 Cookie脱敏遗漏，测试账号已清理；仅测试helper使用合成样本先RED→GREEN遮盖完整Cookie/Authorization/Set-Cookie及分块/base64，不再输出原trace/header。root fresh默认unit108/108、typecheck/diffcheck通过。不能将原测试日志公开提交。
+- 旧本地成功版本的thumbnail缺云artifact时原500已最小修复：先auth/RLS/version/completedrun/path校验，仅artifactPath字段缺失返回诚实200SVG且不下载/build；已记录Storage故障/path不符不降级、PNG保持。独立review无阻断，尚未发布本修复，真实云PNG仍未实现。
+
+- Production-domain修复正式已READY：dpl_9oMdU6K3353jAEan3XCUNBDJb9ZF，主站仍atoms-demo-jiaqi.vercel.app。Owner真实GET单个domain的响应结构与契约一致(name/projectId/verified/branch/customEnvironmentId/redirect)，没有靠mock猜结构。增强probe95391完整成功：resume200/v1/previewReady:true，匿名previewHttpStatus200/fixtureRendered:true，临时账号2/清理失败0；未模型生成、不冒充AI应用验收。
+- 已重跑真实Phase2浏览器会话51636（grep Todo创建），使用30s动作超时和原6m生成等待；尚在执行，不提前宣称三轮通过。不同时跑另一个共享Playwright。并行只读复审旧成功项目缺云artifact时thumbnail是否500；无真实用户源码读取或其他项目写入。
+
+- 正式Phase2会话58050真实失败（8分钟、0通过/1失败，临时账号2/清理失败0）：iframe已出现且v1/alias就绪，但frame task-input不存在。脱敏trace确证preview请求302转Vercel SSO，console报vercel.com frame-ancestors none；不能说生成代码坏。StandardProtection豁免production-domain而非任意指production-dpl alias；项目只有2个主站domain，UUID alias未登记。
+- 临时测试UUID2285fccc-036e-4662-a096-8bd107fcd810的domain登记探针成功：POST ownAtoms domains返回精准project/verifiedtrue/branch和redirect空。匿名badgrant去掉尾slash后403且应用中文授权错误/no redirect（尾slash为同origin308），证明未关闭平台保护且app grant拒绝仍在；不冒充有效HTML验收。
+- Runtime production-domain门禁已增量：alias先拒foreign，所有就绪前GET核验domain name/projectId/verifiedtrue/无branch/customenv/redirect；仅bind missing才POST登记+GET，重新读取可能被平台自动重绑latest的alias，必要时重新assign+finalGETrequested dpl；readonly不写。全部105单元/typecheck及独立review Critical/Important0，正在正式部署会话35446，尚未有部署/有效HTML结果。
+- 诊断runner已增强匿名GET真实previewHTML，严格expectedUUID origin/path，手工redirect仅1次同origin同项目同query的308尾slash，外部302不follow、不转Cookie/Auth，200还需明确diagnostic marker。新增2项先RED→GREEN，runner5/5。Phase2/三个代表应用各加actionTimeout30s，generation/version等待6分钟与功能/console/network断言未放宽。root preview-access测试先RED domainReads0!=1，随后新module GREEN，全suite105。
+- 用户再次要求并行：DomainAgent写门禁；验收Agent写匿名probe；第三Agent只改两spec动作超时并独立review；root统一真实平台探针/build/deploy/Playwright，避免共享报告互相覆盖。Google继续暂缓，成果保留docs/deferred且.vercelignore排除；本次domain和helper都未改模型策略或env。
+
+- 指纹补丁正式部署已READY：dpl_HaMGjqnLgGJfHKJr8uPpa699kcfz（atoms-demo-b66pd6abd-jiaqis-projects-c666d1ab.vercel.app，142源文件）。真实非AI诊断probe45463：resume200/currentVersion1/previewReady:true/previewError空，两个临时账号清理失败0。该结果证明实际Production指纹与runtime Token匹配、alias管理及签链接通过；仍不冒充真实生成iframe整链。
+- 已开始正式Phase2 Playwright执行会话58050（grep Todo创建）：真实模型Todo→深色v2→刷新/重登→原项目恢复→优先级v3→第二账号拒绝；runner新临时账号而非真实用户。尚在运行，不宣称通过；Google继续暂缓/未启用，邮箱公开注册SMTP仍未配置。
+
+- 用户表示此前睡着未见弹窗，已授权重新打开。隐藏输入会话30865：原值格式、与唯一创建记录的prefix/suffix辅助匹配、owner已验证Atoms范围/有效期、同Bearer own200/knownforeign403或404全部通过；用户原始创建来源确认仍是可信设置依据，不把6字符suffix独自当scope证明。Production指纹ATOMS_VERCEL_TOKEN_SHA256已Sensitive新增；第二个Preview环境CLI添加失败（摘要add-server-fingerprint），只读GET确认仅target:[production]，未假称两环境都完成。未覆盖原Token、本地env；不要求重复输入，正式上线继续，Preview开发环境配置后续补。当前正在正式部署指纹补丁，结果以部署/真实probe为准。
+
+- 隐藏输入执行会话72016已结束，exit1，仅安全摘要status:not-completed/step:local hidden input/secretPrinted:false。尚无法区分输入取消、超时或与元数据prefix/suffix不匹配（脚本刻意未记录原值和原错误正文）。执行未进入same-token API或add-server-fingerprint阶段，因此没有新增指纹变量、覆盖Token或修改本地env，也没有部署99单元补丁。下一步先问用户是否看到/填写弹窗，必要时改安全输入诊断以固定reason区分取消/超时/格式/辅助记录不匹配；不要在聊天里索要Token。
+
+- 最新用户已明确“允许”本机隐藏输入原Token并新增server SHA-256指纹；旧“尚未批准”记录由此替代。用户另要求同步网上研究，已查官方repo#17506：项目token ownproject200而user404/team403，未见current附query解锁依据；独立稳定Origin的免费短路径仍现有私有产物+UUID alias，替换为wildcard需可控域名、Sandbox长期URL又受停止/额度/稳定性约束，未贸然改架构。
+- Owner凭据仅Node内存直连官方API（CLI api会自动附teamId使token endpoint400，改不带team query）；只读确认唯一名称“Atoms Preview Management”，projectId精准Atoms，expiresAt1794541692114，未revoked/leaked，prefix长4/suffix长6（仅辅助）。原Token值未读取/打印到聊天。本机隐藏输入脚本正在执行，fingerprint配置是否成功以脚本结果为准；未完成输入前不要宣称已配置。
+- Runtime指纹增量仅preview-domain和测试：ATOMS_VERCEL_TOKEN_SHA256存在即64hex+sameToken SHA256 timingSafeEqual，错误/空值0网络拒绝，不能退回旧流程；匹配时跳平台不支持current，仍own200/id、knownforeign200/401拒绝、deploymentREADY/project、aliasowner/finalGET全保持。注释明确权限依据来自可信设置的owner元数据与用户原值来源，而非指纹自己证明scope。TDD RED→GREEN，root fresh99/99单元/typecheck及独立review Critical/Important0。尚未正式部署此补丁、未通过线上preview/整链。
+
+- 用户随后确认Google设计和保留原Atoms Token，又追加“Google复杂就先别做”。已解释代码小但需新Google OAuth外部配置：loop是Firebase，不可复制其配置到Supabase。Google暂缓，成果归档docs/deferred/google-login/四文件（callback.patch及3份.ts.disabled）；原callback逐行撤回本轮改动并与HEAD blob一致，login/CSS从未加按钮，provider/env未改，未上线Google。默认96单元/typecheck/patch可恢复检查通过。loop只读参考未输出配置值、未修改其数据或代码。
+- 当前预览路径建议：可信本机输入用户保留的原Atoms Token，结合唯一同名创建记录/projectId/有效期核验来源，prefix/suffix仅辅助，不把TokenID当哈希；计算自定义不可逆SHA-256指纹，server env绑定runtime确为此已验证原值。指纹本身不证明权限范围，也不扩大权限。用户正在询问“指纹配置是啥”，尚未批准新增指纹变量或本机隐藏输入；不要写环境配置或弹出凭据输入框。主站现有预览仍不可用，默认runtime保持failclosed。
+
+- 用户追加并行Google账号一键登录（不是仅填写Gmail邮箱）。已呈现bounded设计：登录/注册加Google入口，复用Supabase PKCE及/auth/callback/safeNextPath、保留邮箱/密码、基本openid/email/profile权限，无读邮件/网盘。按brainstorming等待短设计确认，当前只有只读调查，未实现或启用Google provider。所需Google OAuth ClientID/Secret与本项目callback尚待核对，秘密不发聊天。
+- 预览授权需要创建时的Token范围与不可逆指纹可信绑定：官方没有TokenID=SHA256(bearerToken)契约，不能猜哈希。项目Token自身metadata404导致当前failclosed。已询问用户是否保留原Token值，仅回有没有，不要发值；若未保留，需在本机安全流程重新创建同Atoms范围Token，不扩大到团队或所有项目。原有Token/环境未轮换或覆盖。
+
+- 最新正式部署更新为 dpl_6m5PcAv2bj2jjVZghD93kPzQJmQf（atoms-demo-40y84ufdq-jiaqis-projects-c666d1ab.vercel.app）。真实非AI诊断probe再次resume200/v1，但previewReady:false：foreign项目HTTP404，增加同Bearer GET /v5/user/tokens/current后仍HTTP404，错误“无法验证当前管理凭据元数据（HTTP 404），禁止自动绑定预览域名”。不能称域名修复完成，不再猜测放宽。两次诊断各2临时账号均清理，失败0。
+- 当前默认单测96/96通过、typecheck通过；新增生产runner3项安全测试RED→GREEN，独立复审Critical/Important0。runner使用临时confirmed账号，Node管理凭据仅内存；child严格白名单且ATOMS_E2E_SKIP_LOCAL_ENV=1防dotenv重新加载，30分钟SIGKILL截止、finally逐步清理与非敏感补偿manifest。公开邮件验收不在此runner通过范围。本机Node23 fetch需外层undici.EnvHttpProxyAgent读取现有lowercase代理；首次未代理probe fetch failed，未创建账号。
+- 只读部署文件清单已复核：首个4699实际文件，其中generated4494/test-results29，.env/.env.local均0；随后诊断部署163实际文件，generated/test-results均无实际文件（只有空目录），env文件0。不根据此误报密钥泄漏。已向用户请求仅删除首次旧部署的二次确认，未删除。
+
+- 用户已明确批准直接正式部署、定向修复 PostCSS/sharp 并更新锁文件。Next 保持15.5.27，仅覆盖其 PostCSS8.5.30/sharp0.35.5；真实云安装/生产构建成功，npm audit --omit=dev 为0漏洞。
+- 正式主站：https://atoms-demo-jiaqi.vercel.app 。最新正式部署 dpl_DahGejideYRFukooUxkJmm8ocWrU 已READY；首页真实浏览器200、截图已查看。尚未完成核心线上验收，不能称全部可用。
+- 首次真实生产 Phase2 Playwright 失败（6.1分钟）：真实模型生成Todo、Vercel Sandbox构建、私有产物及数据库v1保存成功，但域名权限探测阻止自动绑定，页面显示“管理凭据未证明拒绝其他项目，禁止自动绑定预览域名”，iframe未出现。正在定向诊断，不放宽安全保护猜测。测试创建的2个临时账号、项目及产物已清理，清理失败0；真实用户数据未动。
+- APP_PUBLIC_ORIGIN、ATOMS_PREVIEW_GRANT_SECRET、ATOMS_SCOPE_DENY_PROJECT_ID 已仅新增至本项目Vercel环境；未覆盖本地.env.local。Supabase site_url/redirect已指向正式主站并保留3010本地回调，邮箱确认仍开启。
+- 自定义SMTP host/sender未配置，默认SMTP限制团队收件人；临时管理员确认账号不证明公开注册成功。对外邮箱注册仍需真实SMTP配置与收信验收，不得关闭确认绕过。
+- 云封面暂未实现真实PNG。已授权请求无PNG时返回200私有不缓存SVG“封面暂未生成”，不冒充截图；独立代码审查无实现阻断项，新2条单测已加入默认测试命令。云失败任务持久化/统一恢复快照/孤儿GC仍待完成。
+- 第一次部署未设置.vercelignore，上传约93.8MB/4671个本地源文件（含generated-projects）；随后添加排除env/本地生成目录/测试trace/build缓存的.vercelignore并重部署，最新139文件。首次旧部署仍保留；删除需用户二次确认，不自行销毁。
+- 本地HEAD ea63edb及此前云端改动尚未推送远端（远端main为4c8843a）。有已测试但未提交的缩略图和Phase2测试改动；推送前仍需确认。无本地Next服务运行，勿把旧会话当当前服务。
+
 ## 最新验证：云 HTTP 增量已接入，尚未部署
 
 - 历史UI已本地提交6d066af；随后增量兼容GenerationResult/恢复响应的可选previewUrl、previewReady、previewError，已保存但地址未就绪仍保留项目/源码/消息，错误面板可重试。浏览器先RED复现new URL(undefined)导致应用崩溃，再GREEN。

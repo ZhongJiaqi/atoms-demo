@@ -4,6 +4,7 @@ node_modules/
 .env
 .env.*
 generated-projects/
+docs/deferred/
 test-results/
 playwright-report/
 supabase/.temp/

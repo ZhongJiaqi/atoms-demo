@@ -48,11 +48,12 @@ test("已保存版本签发短期grant前验证项目限定权限并自动绑定
   process.env.ATOMS_VERCEL_API_TOKEN="test-only-management-boundary";
   process.env.ATOMS_SCOPE_DENY_PROJECT_ID="prj_knownForeign";
   const path=artifactObjectPath(owner,project,run);
-  let permissionProbes=0,aliasReads=0,posts=0;
+  let permissionProbes=0,domainReads=0,aliasReads=0,posts=0;
   t.mock.method(globalThis,"fetch",async(input:RequestInfo|URL,init?:RequestInit)=>{
     const pathname=new URL(String(input)).pathname;
     if(pathname===`/v9/projects/${ATOMS_VERCEL_PROJECT_ID}`){permissionProbes++;return Response.json({id:ATOMS_VERCEL_PROJECT_ID});}
     if(pathname==="/v9/projects/prj_knownForeign"){permissionProbes++;return Response.json({}, {status:403});}
+    if(pathname===`/v9/projects/${ATOMS_VERCEL_PROJECT_ID}/domains/${previewHost(project)}`){domainReads++;assert.equal(init?.method,"GET");return Response.json({name:previewHost(project),projectId:ATOMS_VERCEL_PROJECT_ID,verified:true,gitBranch:null,customEnvironmentId:null,redirect:null});}
     if(init?.method==="POST"){assert.equal(permissionProbes,2);posts++;return Response.json({uid:"alias_test",alias:previewHost(project)});}
     if(pathname.startsWith("/v13/deployments/"))return Response.json({id:"dpl_TestOnly123",projectId:ATOMS_VERCEL_PROJECT_ID,readyState:"READY"});
     aliasReads++;
@@ -70,7 +71,7 @@ test("已保存版本签发短期grant前验证项目限定权限并自动绑定
     const grant=verifyPreviewGrant(url.searchParams.get("grant")!,{host:url.hostname,projectId:project});
     assert.equal(grant.version,2);assert.equal(grant.artifactPath,path);
     assert.equal(result.expiresAt,grant.expiresAt*1000);
-    assert.equal(permissionProbes,2);assert.equal(posts,1);assert.equal(aliasReads,2);
+    assert.equal(permissionProbes,2);assert.equal(domainReads,1);assert.equal(posts,1);assert.equal(aliasReads,2);
   }finally{names.forEach((name,index)=>{if(before[index]===undefined)delete process.env[name];else process.env[name]=before[index];});}
 });
 

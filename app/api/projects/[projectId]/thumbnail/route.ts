@@ -19,6 +19,10 @@ export const maxDuration = 120;
 const cacheRoot = join(GENERATED_ROOT, ".thumbnails");
 const enqueue = createThumbnailQueue(6);
 
+function unavailableThumbnail(version: number) {
+  return new Response('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 600" role="img" aria-label="封面暂未生成"><rect width="960" height="600" fill="#f1f3f6"/><text x="480" y="292" text-anchor="middle" font-family="system-ui,sans-serif" font-size="30" fill="#536174">封面暂未生成</text><text x="480" y="338" text-anchor="middle" font-family="system-ui,sans-serif" font-size="18" fill="#748195">项目已保存，可打开查看应用</text></svg>', {headers:{"Content-Type":"image/svg+xml; charset=utf-8","Cache-Control":"private, no-store","X-Project-Version":String(version),"X-Content-Type-Options":"nosniff","X-Atoms-Thumbnail-State":"unavailable"}});
+}
+
 export async function GET(request: Request, context: { params: Promise<{ projectId: string }> }) {
   const { projectId } = await context.params;
   const client = await createClient();
@@ -31,8 +35,11 @@ export async function GET(request: Request, context: { params: Promise<{ project
     if (!Number.isSafeInteger(version) || version < 1 || version > access.currentVersion) return Response.json({ error: "无效项目版本。" }, { status: 400 });
     if (process.env.VERCEL === "1") {
       const bundle = await loadPersistedProject(store, projectId);
-      const artifact = await readArtifact(client, projectId, versionArtifactPath(bundle, owner.id, version));
-      if (!artifact.thumbnail) return Response.json({error:"云端封面暂不可用，仍可打开项目。"},{status:503,headers:{"Cache-Control":"no-store"}});
+      const artifactPath = versionArtifactPath(bundle, owner.id, version);
+      const run = bundle.runs.find(run => run.status === "completed" && run.version === version);
+      if (run?.events.find(event => event.event === "complete")?.data.artifactPath === undefined) return unavailableThumbnail(version);
+      const artifact = await readArtifact(client, projectId, artifactPath);
+      if (!artifact.thumbnail) return unavailableThumbnail(version);
       return new Response(new Uint8Array(Buffer.from(artifact.thumbnail,"base64")), {headers:{"Content-Type":"image/png","Cache-Control":"private, no-store","X-Project-Version":String(version),"X-Content-Type-Options":"nosniff"}});
     }
     const cachePath = join(cacheRoot, `${projectId}-${version}.png`);
