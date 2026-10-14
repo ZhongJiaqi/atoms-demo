@@ -10,6 +10,10 @@
 
 ## 正式部署与线上验收进行中（以下旧记录为历史，不代表当前状态）
 
+- 最新发布收尾：11063正式记账定向验收exit0，1passed/0failed/0skipped/0flaky，temporaryUsers2/cleanupFailures0，真实模型/VM/DB/iframe统计删除双层持久化、正常console/pageerror/HTTP错误0。生产源码27b839d574d56f93fe24e7cae15b9e526df8a098+dpl_hf6wUdBFLQegMRSZavSkAhe4Wh5w，49709正式域名指向Ready。本轮未全量回归/新Prompt多轮组合/SMTP/线上编辑细项；编辑90金额及视觉细项为本地真实样本4case，不混淆。README/说明文档新增场景化设计引导及准确样本证据，HTML报告和本交接同步最终状态。随后只提交推送报告文档收尾，不重复部署纯文档；旧untracked资料不动。可回退dpl_GkZuNubc1djYgN7Zs9UaKc42uJmX，无env/锁/数据库变化。
+
+- go发布已执行：指定8文件commit/push27b839d574d56f93fe24e7cae15b9e526df8a098，远端回读一致、暂存diffcheck/gitleaks无泄漏；25992正式部署READY dpl_hf6wUdBFLQegMRSZavSkAhe4Wh5w（1jzk1u9ua），云完整build/type/routes通过，49709 inspect正式域名atoms-demo-jiaqi指向该新版本。生产仍DeepSeek，新视觉Prompt已生效，env/lock/DB不变。11063只跑正式记账representative一个真实模型生成/统计/删除/双层持久化，目前运行中，尚不能声称通过，结束必须核对cleanupFailures。仅README/说明文档等已授权文件进入Git；旧Google暂停与历史benchmark资料仍untracked，不删除。回退点dpl_GkZuNubc1djYgN7Zs9UaKc42uJmX。
+
 - 用户最新“go”已明确授权本轮视觉Prompt、测试和README/说明文档提交推送正式部署。fresh受影响9unit通过、62460两个真实样本四Playwright通过（零新模型调用），独立review C/I0，本地完整build72140先前通过；21446核对Vercel owner/atoms-demo专属prj正确。部署只改已验收Prompt，不改env/锁/模型/数据库。接下来仅stage指定8文件、diff/gitleaks、正常commit/push/deploy、正式域名inspect与线上定向验收；暂停资料不上传。上一正式dpl_GkZuNubc1djYgN7Zs9UaKc42uJmX为本轮回退点，不能把未完成线上补验说成通过。
 
 - 用户放弃本轮首页升级，未改首页；后来认为DeepSeek生成过简约，Flash截图仅97.33k额度，最终同意保留DeepSeek并研究/优化Prompt。主agent完整重读claude-prompt-template、TDD/writing-good-tests、search-first、frontend-design、systematic-debugging、review/verification；官方调研https://platform.claude.com/cookbook/coding-prompting-for-frontend-aesthetics及Anthropic frontend-design，只迁移设计方法，不引入外部字体/依赖/Claude专用参数。生产代码仅model.ts共享视觉4条和2场景例子；预算8k/16k、SDK/模型/env/锁/权限/安全/超时/重试均未改，无fallback。视觉需求保持用户极简偏好、既有风格和数据优先。
