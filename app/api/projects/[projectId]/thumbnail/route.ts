@@ -1,7 +1,9 @@
 import { randomUUID } from "node:crypto";
 import { mkdir, mkdtemp, readFile, rename, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
+import { tmpdir } from "node:os";
 import { chromium } from "playwright";
+import { after } from "next/server";
 import { GENERATED_ROOT, hydrateProjectDirectoryAt } from "@/lib/agent/files";
 import { loadPersistedProject, loadProjectVersion, requireAuthenticatedUser, requireProjectAccess, type ProjectStoreClient } from "@/lib/persistence/project-store";
 import { createThumbnailQueue } from "@/lib/preview/thumbnail-queue";
@@ -11,19 +13,43 @@ import { buildProject, discardStagedPreview, startPreview } from "@/lib/sandbox/
 import { createClient } from "@/lib/supabase/server";
 import { readArtifact } from "@/lib/cloud/artifacts";
 import { versionArtifactPath } from "@/lib/cloud/preview-access";
+import { getOrCreateProjectThumbnail, validateProjectThumbnail } from "@/lib/cloud/project-thumbnail";
+import { captureCloudThumbnail } from "@/lib/cloud/capture-thumbnail";
+import { buildInVercelSandbox } from "@/lib/sandbox/vercel-build";
+import { collectArtifactBundle } from "@/lib/sandbox/index";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
-export const maxDuration = 120;
+export const maxDuration = 300;
 
 const cacheRoot = join(GENERATED_ROOT, ".thumbnails");
 const enqueue = createThumbnailQueue(6);
-
-function unavailableThumbnail(version: number) {
-  return new Response('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 600" role="img" aria-label="封面暂未生成"><rect width="960" height="600" fill="#f1f3f6"/><text x="480" y="292" text-anchor="middle" font-family="system-ui,sans-serif" font-size="30" fill="#536174">封面暂未生成</text><text x="480" y="338" text-anchor="middle" font-family="system-ui,sans-serif" font-size="18" fill="#748195">项目已保存，可打开查看应用</text></svg>', {headers:{"Content-Type":"image/svg+xml; charset=utf-8","Cache-Control":"private, no-store","X-Project-Version":String(version),"X-Content-Type-Options":"nosniff","X-Atoms-Thumbnail-State":"unavailable"}});
-}
+class ThumbnailTimeoutError extends Error {}
 
 export async function GET(request: Request, context: { params: Promise<{ projectId: string }> }) {
+  if (process.env.VERCEL !== "1") return thumbnail(request, context);
+  const deadline = Date.now() + 260000;
+  let expired = false;
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const remaining = () => {
+    const milliseconds = deadline - Date.now();
+    if (expired || milliseconds <= 0) throw new ThumbnailTimeoutError("封面生成超时，请稍后重试。");
+    return milliseconds;
+  };
+  const work = thumbnail(request, context, remaining);
+  const timeout = new Promise<Response>(resolve => {
+    timer = setTimeout(() => {
+      expired = true;
+      // Keep only the already-started work alive until its VM/tmp cleanup settles.
+      after(() => work.catch(() => undefined));
+      resolve(Response.json({ error: "封面生成超时，请稍后重试。" }, { status: 503, headers: { "Cache-Control": "no-store" } }));
+    }, 260000);
+  });
+  try { return await Promise.race([work, timeout]); }
+  finally { if (timer) clearTimeout(timer); }
+}
+
+async function thumbnail(request: Request, context: { params: Promise<{ projectId: string }> }, remaining?: () => number) {
   const { projectId } = await context.params;
   const client = await createClient();
   const store = client as unknown as ProjectStoreClient;
@@ -34,13 +60,43 @@ export async function GET(request: Request, context: { params: Promise<{ project
     const version = Number(new URL(request.url).searchParams.get("version"));
     if (!Number.isSafeInteger(version) || version < 1 || version > access.currentVersion) return Response.json({ error: "无效项目版本。" }, { status: 400 });
     if (process.env.VERCEL === "1") {
+      const check = remaining!;
+      check();
       const bundle = await loadPersistedProject(store, projectId);
       const artifactPath = versionArtifactPath(bundle, owner.id, version);
+      check();
       const run = bundle.runs.find(run => run.status === "completed" && run.version === version);
-      if (run?.events.find(event => event.event === "complete")?.data.artifactPath === undefined) return unavailableThumbnail(version);
-      const artifact = await readArtifact(client, projectId, artifactPath);
-      if (!artifact.thumbnail) return unavailableThumbnail(version);
-      return new Response(new Uint8Array(Buffer.from(artifact.thumbnail,"base64")), {headers:{"Content-Type":"image/png","Cache-Control":"private, no-store","X-Project-Version":String(version),"X-Content-Type-Options":"nosniff"}});
+      const recorded = run?.events.find(event => event.event === "complete")?.data.artifactPath !== undefined;
+      const artifact = recorded ? await readArtifact(client, projectId, artifactPath) : undefined;
+      check();
+      const capture = async (input: Parameters<typeof captureCloudThumbnail>[0]) => {
+        const timeoutMs = Math.min(120000, check() - 20000);
+        if (timeoutMs < 1000) throw new ThumbnailTimeoutError("封面生成超时，请稍后重试。");
+        const png = await captureCloudThumbnail(input, { timeoutMs });
+        check(); // Do not start cache upload after this request has expired.
+        return png;
+      };
+      const png = artifact?.thumbnail ? validateProjectThumbnail(Buffer.from(artifact.thumbnail, "base64")) : await enqueue(`cloud:${owner.id}:${projectId}:${version}`, () => {
+        check(); // Expired queued jobs must never launch a new VM.
+        return getOrCreateProjectThumbnail(client, projectId, version, async () => {
+          check();
+          if (artifact) return capture(artifact);
+          const project = await loadProjectVersion(store, projectId, version);
+          if (check() < 190000) throw new ThumbnailTimeoutError("截图服务繁忙，剩余构建时间不足，请稍后重试。");
+          const root = await mkdtemp(join(tmpdir(), "atoms-cloud-thumbnail-"));
+          try {
+            const now = new Date().toISOString();
+            const directory = await hydrateProjectDirectoryAt(root, { projectId, projectName: project.projectName, summary: project.summary, currentVersion: version, createdAt: now, updatedAt: now, messages: [], turns: [] }, project);
+            if (check() < 190000) throw new ThumbnailTimeoutError("截图服务繁忙，剩余构建时间不足，请稍后重试。");
+            const build = await buildInVercelSandbox(directory);
+            if (!build.success) throw new Error("主页截图云构建失败。");
+            check();
+            return await capture(await collectArtifactBundle(directory));
+          } finally { await rm(root, { recursive: true, force: true }); }
+        });
+      });
+      check();
+      return new Response(new Uint8Array(png), {headers:{"Content-Type":"image/png","Cache-Control":"private, no-store","X-Project-Version":String(version),"X-Content-Type-Options":"nosniff"}});
     }
     const cachePath = join(cacheRoot, `${projectId}-${version}.png`);
     let png: Buffer;
@@ -82,7 +138,7 @@ export async function GET(request: Request, context: { params: Promise<{ project
     return new Response(new Uint8Array(png), { headers: { "Content-Type": "image/png", "Cache-Control": "private, no-store", "X-Project-Version": String(version), "X-Content-Type-Options": "nosniff" } });
   } catch (error) {
     const message = error instanceof Error ? error.message : "主页截图不可用。";
-    const status = message.includes("登录") ? 401 : message.includes("无权") || message.includes("不存在") ? 404 : message.includes("繁忙") ? 503 : 500;
+    const status = error instanceof ThumbnailTimeoutError ? 503 : message.includes("登录") ? 401 : message.includes("无权") || message.includes("不存在") ? 404 : message.includes("繁忙") ? 503 : 500;
     return Response.json({ error: status === 500 ? "主页截图暂不可用，请打开项目重试。" : message }, { status, headers: { "Cache-Control": "no-store" } });
   }
 }

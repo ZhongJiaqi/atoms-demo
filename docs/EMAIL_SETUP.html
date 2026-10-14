@@ -1,0 +1,17 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Atoms Demo · 验证邮件配置结果</title>
+<style>body{margin:0;background:#f5f7fb;color:#233047;font:16px/1.8 system-ui,-apple-system,"PingFang SC",sans-serif}main{max-width:800px;margin:40px auto;padding:0 20px}section{background:#fff;border:1px solid #dde3ed;border-radius:16px;padding:24px;margin:20px 0}h1{font-size:28px}h2{font-size:20px}code{overflow-wrap:anywhere}a{color:#4355de}.pending{color:#946200}li{margin:8px 0}</style></head><body><main>
+<h1>注册验证邮件：配置完成，真实收信验收通过</h1>
+<p>2026-10-14。用户明确不购买域名，改选 QQ SMTP，并批准修改 Atoms 正式认证配置。Resend 与 Vercel DNS 方案暂停，未修改 DNS。</p>
+<section><h2>真实配置与回读结果</h2><ul>
+<li>目标：Atoms 独立 Supabase 项目 <code>jvnweimexkigooqvagfz</code>，没有修改其他项目。</li>
+<li>SMTP：<code>smtp.qq.com</code>，端口 <code>465</code>；用户名及发件地址使用用户通过本机弹窗输入的 QQ 邮箱；发件人名称为 Atoms Demo。</li>
+<li>Management API PATCH 成功，GET 回读：SMTP 配置匹配，邮箱确认仍开启。</li>
+<li>Site URL 保持 <code>https://atoms-demo-jiaqi.vercel.app</code>；Redirect URLs 保持不变；逐字段比较，SMTP 六字段以外没有配置变化。</li>
+<li>授权码通过 macOS 隐藏输入，仅在进程内存处理，并提交到 Supabase SMTP 设置；未写本机文件、环境文件、代码或日志，未输出密钥或完整邮箱地址。</li>
+</ul></section>
+<section><h2>最终验收通过</h2><p>真实只读检查确认用户指定的 Gmail 不属于 Supabase 团队且此前未在 Atoms 注册。正式网站 Playwright 真实注册成功，确认前数据库账号仍未激活。用户从真实收到的邮件通过本机隐藏输入提供确认链接，测试在原注册浏览器打开链接后，数据库确认账号已激活、回调自动登录成功、退出后邮箱密码重新登录成功。</p><ul><li>真实测试会话 88216：signupSucceeded、emailConfirmed、callbackLoggedIn、passwordLogin、logoutRelogin、passed 均为 true，进程退出 0。</li><li>浏览器正常流程 console/pageerror 合计 0，HTTP 4xx/5xx 响应合计 0。</li><li>未使用管理员确认，未打印或保存密码、链接或凭据；用户账号保留，没有删除数据。</li><li>只执行本次认证相关真实集成验收，未运行全量测试或重新构建：本轮没有修改业务代码或依赖。</li></ul>
+<ol><li>选定一个此前未在 Atoms 注册、可以查看收件箱且非 Supabase 团队成员的邮箱。</li><li>在正式网站注册，确认页面提示发送验证邮件。</li><li>检查收件箱和垃圾邮件箱，核对发件身份；不要公开验证链接。</li><li>在注册所用浏览器打开验证链接，确认账户激活并进入登录状态；再退出并用邮箱密码登录。</li><li>记录真实收信、激活、登录结果；如果失败，排查 SMTP 和 Auth 日志，不关闭邮箱确认。</li></ol></section>
+<section><h2>残留风险与回滚范围</h2><p>本次 Gmail 验收通过不保证所有邮箱的长期投递稳定性。QQ 个人邮箱可能限流、风控或影响投递，当前只作为少量用户演示方案；没有验证批量投递、其他收件服务商及长期可靠性。邮件显示个人发件地址。授权码权限由 QQ 服务决定，不能等同于仅限发信的域名级密钥；怀疑泄露时应在 QQ 邮箱撤销并重新生成。</p><p>配置前 SMTP 主机和发件地址为空。需要回滚时仅处理本次 SMTP 六字段，保留邮箱确认、网址及其他 Auth 配置；再次批准后执行。不修改业务代码，不删除任何原用户数据。</p></section>
+<p><a href="https://supabase.com/docs/guides/auth/auth-smtp">Supabase 自定义 SMTP</a> · <a href="https://intl.cloud.tencent.com/zh/document/product/1266/71700">腾讯 SMTP 参数说明</a></p>
+</main></body></html>

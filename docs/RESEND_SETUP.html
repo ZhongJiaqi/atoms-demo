@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Atoms · 注册验证邮件配置计划</title>
+<style>body{margin:0;background:#f4f6fa;color:#24334b;font:15px/1.8 system-ui,-apple-system,"PingFang SC",sans-serif}main{max-width:920px;margin:36px auto;padding:0 20px}section,details{background:white;border:1px solid #dfe6f0;border-radius:14px;margin:16px 0;padding:22px}h1{font-size:28px}h2{font-size:19px}table{border-collapse:collapse;width:100%}td,th{padding:10px;text-align:left;vertical-align:top;border-bottom:1px solid #e7ecf4}code{background:#edf2fa;padding:2px 5px;overflow-wrap:anywhere}a{color:#315efb}.pending{color:#916515;font-weight:650}.muted{color:#65738b}li{margin:7px 0}@media(max-width:600px){main{margin:20px auto}section,details{padding:16px}table{font-size:12px}td,th{padding:7px}}</style></head>
+<body><main>
+<p class="muted">2026-10-14 · 只读调查与配置前计划；尚未修改生产DNS或Auth</p>
+<h1>让新用户真正收到注册验证邮件</h1>
+<section><h2>此方案已暂停</h2><p>用户没有自有域名且明确不购买，改选 QQ SMTP，并已批准配置。Atoms SMTP 已通过 Management API 设置并回读成功，邮箱确认保持开启；真实新邮箱收信、确认和登录尚待验收。以下保留为原 Resend 方案调查，不代表当前配置。最新结果见 <a href="EMAIL_SETUP.html">邮箱配置结果</a>。</p></section>
+<section><h2>当前结论</h2>
+<p>最小方案是保留现有Supabase邮箱注册与确认流程，给它配置Resend SMTP；不新增认证库、邮件Hook、Google登录或密码重置功能。现有账号登录可用，不等于新邮箱已经能收到邮件。</p>
+<p class="pending">现在停在两项前置：Resend CLI没有认证；本次指定Vercel团队未找到顶级自定义域名。需要用户确认可控发信域名与凭据接入，再批准精确DNS/Auth变更清单。</p>
+</section>
+<section><h2>本次真实只读检查</h2><table><thead><tr><th>对象</th><th>结果</th><th>范围</th></tr></thead><tbody>
+<tr><td>官方CLI</td><td>固定版本<code>resend-cli@2.23.0</code>已通过npx在npm用户缓存安装，版本命令退出0。</td><td>不是SDK <code>resend</code>；不写项目依赖、锁或系统全局目录。</td></tr>
+<tr><td>Resend身份</td><td><code>authenticated=false</code>，whoami退出1。</td><td>原始JSON仅内存捕获；没有输出API key或前缀，没有登录、建域名或发信。未认证，因此没有读取域名清单，不能断言Resend账号没有域名。</td></tr>
+<tr><td>Vercel上下文</td><td>本地Atoms项目与目标team精确匹配；CLI项目检查返回正确project ID；指定team域名list退出0，明确无域名。</td><td><code>prj_Qy0ugq79jGkv9gAGc1vVeNtMpdkm</code><br><code>team_t41qF1poOXtcPYCh009TSUpt</code>。只查询该团队，不意味着用户在其他DNS服务没有域名。</td></tr>
+<tr><td>Supabase Auth</td><td>本次Management API GET成功。邮箱确认开启：<code>mailer_autoconfirm=false</code>；SMTP主机存在=false，发件地址存在=false。</td><td>仅<code>jvnweimexkigooqvagfz</code>，未输出或修改SMTP密码。</td></tr>
+<tr><td>回调</td><td>Site URL为<code>https://atoms-demo-jiaqi.vercel.app</code>；允许主站/**、127.0.0.1:3010/**和localhost:3010/**。</td><td>这些设置保留，不因SMTP配置重置。</td></tr>
+</tbody></table></section>
+<section><h2>先请用户提供什么</h2><ol>
+<li>确认已有自有域名的名称及DNS服务商，或另行决定购买域名。主站仍可保留当前vercel.app地址，发信域名不必等于网站域名。</li>
+<li>登录<a href="https://resend.com/api-keys">Resend API Keys</a>。若还没账号，先完成注册；确认使用哪个Resend团队。不要把完整API key粘贴进聊天、HTML、命令参数或.env。</li>
+<li>确认安全凭据交接方式，例如系统安全存储/受控的隐藏输入。CLI支持环境中的<code>RESEND_API_KEY</code>和安全存储方式；本轮没有创建凭据文件。后续若采用CLI交互登录，应先明确选用secure_storage，不能退回明文文件。管理域名查询需要相应管理权限；最终SMTP使用独立、尽量限于已验证发信域名的发送凭据。</li>
+<li>选定认证专用子域（例如<code>auth.你的域名</code>）、发件地址（例如<code>no-reply@auth.你的域名</code>）及显示名Atoms。这只是待确认示例，不是已经存在的域名。</li>
+</ol>
+<p>Resend要求验证用户控制的域名，不能使用共享公共域名。<a href="https://resend.com/docs/dashboard/domains/introduction">官方域名说明</a>。Vercel能管理DNS的前提是域名采用其nameservers；若DNS仍在其他服务，记录必须在那里配置，不应为邮件擅自迁移整站NS。<a href="https://vercel.com/docs/domains/set-up-custom-domain">官方DNS配置说明</a>。</p>
+</section>
+<section><h2>批准后才执行的最小变更</h2><table><thead><tr><th>阶段</th><th>计划动作</th><th>保护措施与完成证据</th></tr></thead><tbody>
+<tr><td>1. 确认控制权</td><td>只读检查选定域名、nameservers与既有DNS；核对Resend身份和域名metadata。</td><td>再次确认目标team/zone；没有所有权或权限就停止。</td></tr>
+<tr><td>2. 呈现精确DNS清单</td><td>经确认后在Resend登记专用发送子域，获取实际DKIM/SPF/Return-Path记录，再给用户逐条展示类型、名称和值。</td><td>不猜记录，不抢占他人域名，不启用收信。既有MX/网站A/CNAME/TXT不改；已有SPF不能简单再叠第二条。DNS写入前再确认。</td></tr>
+<tr><td>3. 追加并验证DNS</td><td>仅追加批准记录；触发Resend验证并轮询verified；检查公共DNS解析。</td><td>保留原值及本次record ID；记录冲突不覆盖。禁用认证邮件的点击/打开追踪；DMARC如需新增，单独列入清单审批。</td></tr>
+<tr><td>4. 最小SMTP PATCH</td><td>仅Atoms Auth SMTP主机<code>smtp.resend.com</code>、端口<code>465</code>、用户名<code>resend</code>、内存凭据及批准发件信息。</td><td>邮箱确认始终开启；site URL/allowlist/providers及其他Auth配置不变。避免supabase config push整体覆盖。读取后只输出存在布尔，不打印密码。<a href="https://resend.com/docs/send-with-supabase-smtp">官方Supabase SMTP集成</a>。</td></tr>
+<tr><td>5. 真注册验收</td><td>从正式网站用获授权、可真实收信的非团队邮箱注册，接收验证信，点击链接，再登录和退出重登。</td><td>不使用admin确认替代真实邮件。检查邮件到达、认证状态变化及安全回跳，不记录验证码、邮件链接或Cookie。</td></tr>
+</tbody></table></section>
+<section><h2>配置后验收清单</h2><ul>
+<li>Resend域名verified且DNS与控制权匹配；SMTP配置已回读，邮箱确认仍true。</li>
+<li>非Supabase团队邮箱真实收到信；发送成功与投递/实际收件分别验证，检查垃圾箱，不把accepted当delivered。</li>
+<li>未验证账号不能当已验证账号登录；真人点击验证后可登录，callback回到批准主站且原项目next保留。</li>
+<li>正式Playwright验证注册提示与登录后业务，正常路径console/network无非预期错误；验证码/邮件链接由安全受控通道处理，不注入报告。</li>
+<li>如旧/已使用链接的行为不符合预期，记录失败而非关闭邮箱确认；失败时保留足够安全状态供排查。</li>
+<li>仅清理本轮授权测试账号和它创建的数据；真实收件邮箱归用户，不能擅删其原有账号。</li>
+</ul><p>Supabase默认邮件服务限制向团队地址发信，公众邮箱流程需要自定义SMTP；测试中的管理员预确认账号不能证明邮件链路。<a href="https://supabase.com/docs/guides/auth/auth-smtp">Supabase官方限制与安全建议</a>。</p></section>
+<details><summary>回滚与未执行事项</summary><p>批准写入前把原SMTP配置仅存安全内存/安全存储，DNS非敏感原值与本次record ID记录在运维交接中；需要回滚时，只恢复本次SMTP字段和移除本次新增记录，删除动作另获批准。邮箱确认不关闭；不动其他项目、用户已有DNS或原邮件服务。</p><p>本轮未写DNS/Auth、未建发送域名、未发邮件、未改.env或锁、未部署。官方CLI安装与metadata调查成功不等于邮件配置完成。</p></details>
+<details><summary>主Agent需完整读取的官方CLI技能</summary><p><a href="https://raw.githubusercontent.com/resend/resend-skills/main/skills/resend-cli/SKILL.md">官方SKILL.md（213行）</a> · <a href="https://raw.githubusercontent.com/resend/resend-skills/main/skills/resend-cli/references/auth.md">auth参考</a> · <a href="https://raw.githubusercontent.com/resend/resend-skills/main/skills/resend-cli/references/domains.md">domains参考</a></p><p>本轮只读取这些官方内容，没有把技能安装到.codex或另建技能目录。安全审查规范要求凭据不出现在参数/日志/文件，这使调查停在未认证状态，而不是自动登录或写生产配置。</p></details>
+<p class="muted">本计划先供用户确认；域名名称、记录值和真实收件结果尚未取得，不预填成功。</p>
+</main></body></html>
