@@ -3,9 +3,14 @@ import { type NextRequest, NextResponse } from "next/server";
 
 import { authRouteDecision } from "@/lib/auth/policy";
 import { hasSupabaseConfig, supabaseConfig } from "@/lib/supabase/config";
+import { previewHostDecision } from "@/lib/cloud/preview-host-policy";
 
 export async function middleware(request: NextRequest) {
+  const previewDecision = previewHostDecision(request.nextUrl.hostname, request.nextUrl.pathname);
+  if (previewDecision === "blocked") return new NextResponse("预览域名仅允许访问对应项目", {status:404, headers:{"Cache-Control":"no-store"}});
+  if (previewDecision === "gateway") return NextResponse.next({request});
   let response = NextResponse.next({ request });
+  if (request.nextUrl.pathname !== "/" && request.nextUrl.pathname !== "/projects") return response;
   const decision = authRouteDecision(request.nextUrl.pathname, request.nextUrl.search);
   if (!hasSupabaseConfig(process.env)) {
     if (!decision.protected) return response;
@@ -39,5 +44,5 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/", "/projects"],
+  matcher: ["/:path*"],
 };

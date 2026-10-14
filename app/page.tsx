@@ -20,7 +20,9 @@ type GenerationResult = {
   summary: string;
   model: string;
   buildAttempts: number;
-  previewUrl: string;
+  previewUrl?: string;
+  previewReady?: boolean;
+  previewError?: string;
   generatedFiles: string[];
   changedFiles: string[];
   deletedFiles: string[];
@@ -63,7 +65,9 @@ type RestoredProject = {
   currentVersion: number;
   turns: PersistedTurn[];
   files: SourceFile[];
-  previewUrl: string;
+  previewUrl?: string;
+  previewReady?: boolean;
+  previewError?: string;
 };
 
 type ProjectSummary = {
@@ -359,11 +363,11 @@ export default function CodingAgentPage() {
   const latestTurn = turns.at(-1);
   const isWorkspace = turns.length > 0;
   const currentSource = sourceFiles.find((file) => file.path === activeFile) ?? sourceFiles[0];
-  const previewIsCrossOrigin = result && typeof window !== "undefined"
+  const previewIsCrossOrigin = result?.previewUrl && typeof window !== "undefined"
     ? new URL(result.previewUrl).origin !== window.location.origin
     : false;
-  const preview = useProjectPreview({ projectId: result?.projectId, version: result?.version, paused: running || restoringVersion !== null,
-    onResumed: (url) => setResult((current) => current && current.projectId === result?.projectId && current.version === result.version ? { ...current, previewUrl: url } : current),
+  const preview = useProjectPreview({ projectId: result?.projectId, version: result?.version, previewReady: result?.previewReady, previewError: result?.previewError, paused: running || restoringVersion !== null,
+    onResumed: (url) => setResult((current) => current && current.projectId === result?.projectId && current.version === result.version ? { ...current, previewUrl: url, previewReady: true, previewError: undefined } : current),
     onVersionChanged: restoreWorkspace,
   });
 
@@ -471,6 +475,8 @@ export default function CodingAgentPage() {
               model: turn.model || "已保存版本",
               buildAttempts: turn.buildAttempts || 1,
               previewUrl: data.previewUrl,
+              previewReady: data.previewReady,
+              previewError: data.previewError,
               generatedFiles: data.files.map((file) => file.path),
               changedFiles: turn.changedFiles || [],
               deletedFiles: turn.deletedFiles || [],
@@ -768,17 +774,17 @@ export default function CodingAgentPage() {
             </div>
             <button aria-label="刷新预览" data-tooltip="刷新预览" disabled={preview.status === "restoring"} onClick={() => void preview.refresh(true)} type="button"><WorkspaceIcon name="refresh" /></button>
             <div className="route-select"><b>应用预览</b></div>
-            {result ? <a aria-label="在新标签页打开" data-tooltip="独立打开预览" href={result.previewUrl} rel="noreferrer" target="_blank"><WorkspaceIcon name="external" /></a> : <span />}
+            {result?.previewUrl ? <a aria-label="在新标签页打开" data-tooltip="独立打开预览" href={result.previewUrl} rel="noreferrer" target="_blank"><WorkspaceIcon name="external" /></a> : <span />}
             <button aria-expanded={consoleOpen} className={consoleOpen ? "is-active" : ""} onClick={() => setConsoleOpen((value) => !value)} type="button"><WorkspaceIcon name="terminal" />执行日志</button>
           </div>
 
           {viewerMode === "preview" ? (
             <div className={`preview-canvas is-${previewDevice}`}>
-              {result && preview.status === "error" ? (
-                <div className="viewer-empty is-error"><h2>预览暂时不可用</h2><p>{preview.error}</p><button className="primary-button preview-retry-button" onClick={() => void preview.refresh(true)} type="button">重试预览</button></div>
+              {result && (preview.status === "error" || (!result.previewUrl && result.previewReady === false && preview.status !== "restoring")) ? (
+                <div className="viewer-empty is-error"><h2>预览暂时不可用</h2><p>{preview.error || result.previewError || "项目已保存，但预览地址尚未就绪。"}</p><button className="primary-button preview-retry-button" onClick={() => void preview.refresh(true)} type="button">重试预览</button></div>
               ) : result && !running && preview.status !== "ready" ? (
                 <div className="viewer-building" role="status"><div className="building-orbit"><i /><i /><i /></div><h2>正在恢复预览</h2><p>从已保存的项目代码启动预览，不创建新项目。</p></div>
-              ) : result ? (
+              ) : result?.previewUrl ? (
                 <div className="preview-frame-wrap">
                   {running ? <div className="pending-preview"><i />正在构建新版本，当前展示 v{result.version}</div> : null}
                   <iframe

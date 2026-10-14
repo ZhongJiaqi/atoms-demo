@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 
-import { generateProject, modifyProject, repairProject, repairProjectPatch } from "./model";
+import { generateProject, modifyProject, repairProject, repairProjectPatch } from "./model.ts";
 import {
   loadGeneratedProject,
   loadProjectState,
@@ -13,12 +13,20 @@ import {
   validateProject,
   writeGeneratedFiles,
   writeProjectPatch,
-} from "./files";
+} from "./files.ts";
 import type { AgentEvent, GeneratedProject, ProjectState, ProjectTurn } from "./types";
-import { buildProject, getProjectRuntimeDirectory, startPreview } from "../sandbox/local-sandbox";
-import { previewUrl } from "../preview-url";
+import { buildProject, getProjectRuntimeDirectory, startPreview } from "../sandbox/local-sandbox.ts";
+import { previewUrl } from "../preview-url.ts";
 
 const MAX_REPAIR_ROUNDS = 2;
+
+export type GenerationRuntime = {
+  projectId: string;
+  root: string;
+  build: typeof buildProject;
+  load: (projectId: string) => Promise<{ projectDir: string; state: ProjectState; project: GeneratedProject }>;
+  publish: (projectId: string, projectDir: string, turnId: string, version: number) => Promise<{ artifactPath: string; previewReady: boolean; previewUrl?: string }>;
+};
 
 export type GenerationPersistence = {
   createDraft: (projectId: string) => Promise<void>;
@@ -66,8 +74,9 @@ async function runCreation(
   origin: string,
   emit: (event: AgentEvent) => void,
   persistence: GenerationPersistence,
+  runtime?: GenerationRuntime,
 ) {
-  const projectId = randomUUID();
+  const projectId = runtime?.projectId ?? randomUUID();
   const turnId = randomUUID();
   const startedAt = new Date().toISOString();
   const turn: ProjectTurn = {
@@ -102,7 +111,7 @@ async function runCreation(
       try {
         validateProject(current);
         if (!projectDir) {
-          projectDir = await prepareProjectDirectory(projectId, requirement, current);
+          projectDir = await prepareProjectDirectory(projectId, requirement, current, runtime?.root);
           send({
             event: "files_saved",
             data: {
@@ -116,7 +125,7 @@ async function runCreation(
         }
 
         send({ event: "build_started", data: { attempt, message: `开始第 ${attempt} 次受控构建` } });
-        const result = await buildProject(projectDir);
+        const result = await (runtime?.build ?? buildProject)(projectDir);
         failureLog = buildLog(result);
         await saveBuildLog(projectDir, turnId, attempt, failureLog || "构建成功，无错误日志。\n");
         if (result.success) break;
@@ -147,9 +156,10 @@ async function runCreation(
 
     if (!projectDir || !current) throw new Error("模型没有生成通过安全校验的项目文件。");
     await snapshotProjectVersion(projectDir, 1, current);
-    send({ event: "preview_started", data: { message: "正在受控沙盒中启动真实 Vite 预览" } });
-    await startPreview(projectId, projectDir);
-    const url = previewUrl(origin, projectId, 1);
+    send({ event: "preview_started", data: { message: runtime ? "正在保存云端构建产物" : "正在受控沙盒中启动真实 Vite 预览" } });
+    const preview = runtime
+      ? await runtime.publish(projectId, projectDir, turnId, 1)
+      : await startPreview(projectId, projectDir).then(() => ({ previewUrl: previewUrl(origin, projectId, 1) }));
     const complete: AgentEvent = {
       event: "complete",
       data: {
@@ -160,7 +170,7 @@ async function runCreation(
         summary: current.summary,
         model,
         buildAttempts: finalAttempt,
-        previewUrl: url,
+        ...preview,
         generatedFiles: current.files.map((file) => file.path),
         changedFiles: current.files.map((file) => file.path),
         deletedFiles: [],
@@ -223,13 +233,15 @@ async function runModification(
   origin: string,
   emit: (event: AgentEvent) => void,
   persistence: GenerationPersistence,
+  runtime?: GenerationRuntime,
 ) {
-  const projectDir = getProjectRuntimeDirectory(projectId) ?? await resolveProjectDirectory(projectId);
-  const state = await loadProjectState(projectDir);
+  const loaded = runtime ? await runtime.load(projectId) : null;
+  const projectDir = loaded?.projectDir ?? getProjectRuntimeDirectory(projectId) ?? await resolveProjectDirectory(projectId);
+  const state = loaded?.state ?? await loadProjectState(projectDir);
   if (state.projectId !== projectId || state.currentVersion < 1) {
     throw new Error("该项目没有可继续修改的成功版本。");
   }
-  const baseProject = await loadGeneratedProject(projectDir, state);
+  const baseProject = loaded?.project ?? await loadGeneratedProject(projectDir, state);
   const expectedVersion = state.currentVersion;
   let current = baseProject;
   const turnId = randomUUID();
@@ -301,7 +313,7 @@ async function runModification(
           },
         });
         send({ event: "build_started", data: { attempt, message: `在原项目目录执行第 ${attempt} 次受控构建` } });
-        const result = await buildProject(projectDir);
+        const result = await (runtime?.build ?? buildProject)(projectDir);
         failureLog = buildLog(result);
         await saveBuildLog(projectDir, turnId, attempt, failureLog || "构建成功，无错误日志。\n");
         if (result.success) break;
@@ -335,9 +347,10 @@ async function runModification(
 
     const version = state.currentVersion + 1;
     await snapshotProjectVersion(projectDir, version, current);
-    send({ event: "preview_started", data: { message: "正在替换同一项目的真实 Vite 预览" } });
-    await startPreview(projectId, projectDir);
-    const url = previewUrl(origin, projectId, version);
+    send({ event: "preview_started", data: { message: runtime ? "正在保存云端构建产物" : "正在替换同一项目的真实 Vite 预览" } });
+    const preview = runtime
+      ? await runtime.publish(projectId, projectDir, turnId, version)
+      : await startPreview(projectId, projectDir).then(() => ({ previewUrl: previewUrl(origin, projectId, version) }));
     const complete: AgentEvent = {
       event: "complete",
       data: {
@@ -348,7 +361,7 @@ async function runModification(
         summary: current.summary,
         model,
         buildAttempts: finalAttempt,
-        previewUrl: url,
+        ...preview,
         generatedFiles: current.files.map((file) => file.path),
         changedFiles: [...allChanged],
         deletedFiles: [...allDeleted],
@@ -382,7 +395,7 @@ async function runModification(
     const failedAt = new Date().toISOString();
     let failure = errorMessage(error);
     try {
-      await restoreLastWorkingVersion(projectDir, baseProject);
+      if (!runtime) await restoreLastWorkingVersion(projectDir, baseProject);
     } catch (restoreError) {
       failure = `${failure}\n${errorMessage(restoreError)}`;
     }
@@ -411,10 +424,11 @@ export async function runGeneration(
   emit: (event: AgentEvent) => void,
   persistence: GenerationPersistence,
   projectId?: string,
+  runtime?: GenerationRuntime,
 ) {
   if (projectId) {
-    await runModification(requirement, projectId, previewOrigin, emit, persistence);
+    await runModification(requirement, projectId, previewOrigin, emit, persistence, runtime);
     return;
   }
-  await runCreation(requirement, previewOrigin, emit, persistence);
+  await runCreation(requirement, previewOrigin, emit, persistence, runtime);
 }

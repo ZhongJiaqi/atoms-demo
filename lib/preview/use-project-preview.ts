@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 
-type Input = { projectId?: string; version?: number; paused: boolean; onResumed: (url: string) => void; onVersionChanged: (projectId: string) => Promise<boolean | undefined> };
+type Input = { projectId?: string; version?: number; previewReady?: boolean; previewError?: string; paused: boolean; onResumed: (url: string) => void; onVersionChanged: (projectId: string) => Promise<boolean | undefined> };
 type PreviewState = { key: string; status: "checking" | "ready" | "restoring" | "error"; error: string };
 
 export function useProjectPreview(input: Input) {
@@ -23,7 +23,7 @@ export function useProjectPreview(input: Input) {
     try {
       const response = await fetch(`/api/projects/${target.projectId}/preview-status`, { cache: "no-store", signal: AbortSignal.timeout(10000) });
       if (response.status === 401) { window.location.assign(`/login?next=${encodeURIComponent(location.pathname + location.search)}`); return; }
-      const status = await response.json() as { active: boolean; expiresAt: number | null; currentVersion: number; error?: string };
+      const status = await response.json() as { active: boolean; cloud?: boolean; expiresAt: number | null; currentVersion: number; error?: string };
       if (!response.ok) throw new Error(status.error || "无法检查预览状态，请重试。");
       if (!applicable()) return;
       if (status.currentVersion !== target.version) {
@@ -32,13 +32,13 @@ export function useProjectPreview(input: Input) {
         return;
       }
       let expiresAt = status.expiresAt;
-      if (!status.active) {
+      if (!status.active || (status.cloud && (reload || target.previewReady === false))) {
         setState({ key: targetKey, status: "restoring", error: "" });
         const resumed = await fetch(`/api/projects/${target.projectId}/resume`, { method: "POST", cache: "no-store", signal: AbortSignal.timeout(75000) });
-        const data = await resumed.json() as { projectId: string; currentVersion: number; previewUrl: string; expiresAt?: number | null; error?: string };
+        const data = await resumed.json() as { projectId: string; currentVersion: number; previewUrl?: string; previewReady?: boolean; previewError?: string; expiresAt?: number | null; error?: string };
         if (!resumed.ok) throw new Error(data.error || "预览恢复失败，请重试。");
         if (!applicable()) return;
-        if (data.projectId !== target.projectId || !data.previewUrl) throw new Error("项目恢复返回了无效结果，请重试。");
+        if (data.projectId !== target.projectId || !data.previewUrl) throw new Error(data.previewError || "项目恢复返回了无效结果，请重试。");
         if (data.currentVersion !== target.version) {
           if (!await latest.current.onVersionChanged(target.projectId)) throw new Error("最新版本同步失败，请重试预览。");
           return;
@@ -51,7 +51,7 @@ export function useProjectPreview(input: Input) {
       setState({ key: targetKey, status: "ready", error: "" });
       if (reload) setRefreshKey((value) => value + 1);
       clearTimeout(expiryTimer.current);
-      if (expiresAt) expiryTimer.current = setTimeout(() => { void refresh(); }, Math.max(1000, expiresAt - Date.now() + 100));
+      if (expiresAt && !status.cloud) expiryTimer.current = setTimeout(() => { void refresh(); }, Math.max(1000, expiresAt - Date.now() + 100));
     } catch (error) {
       if (applicable()) setState({ key: targetKey, status: "error", error: error instanceof Error ? error.message : "预览恢复失败，请重试。" });
     } finally {

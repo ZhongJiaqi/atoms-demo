@@ -1,5 +1,6 @@
 import { getPreview } from "@/lib/sandbox/local-sandbox";
 import { previewFrameAncestors } from "@/lib/preview-url";
+import { serveCloudPreview } from "@/lib/cloud/preview-access";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -10,6 +11,7 @@ type RouteContext = {
 
 async function proxyPreview(request: Request, context: RouteContext) {
   const { projectId, path = [] } = await context.params;
+  if (process.env.VERCEL === "1") return serveCloudPreview(request, projectId, path);
   if (!/^[0-9a-f-]{36}$/i.test(projectId) || path.some((part) => part === ".." || part === ".")) {
     return new Response("无效预览路径。", { status: 400 });
   }

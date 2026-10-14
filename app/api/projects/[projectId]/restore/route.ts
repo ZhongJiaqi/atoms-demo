@@ -7,10 +7,11 @@ import { confirmRestoredVersion, loadPersistedProject, loadProjectVersion, persi
 import { restoreProjectVersion } from "@/lib/persistence/restore-version";
 import { activateStagedPreview, buildProject, discardStagedPreview, getProjectRuntimeDirectory, startPreview } from "@/lib/sandbox/local-sandbox";
 import { previewUrl } from "@/lib/preview-url";
+import { restoreCloudProject } from "@/lib/cloud/project-runtime";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
-export const maxDuration = 120;
+export const maxDuration = 300;
 type Context = { params: Promise<{ projectId: string }> };
 
 async function cleanupPreviousRuntime(projectId: string, previousDir?: string) {
@@ -36,6 +37,16 @@ export async function POST(request: Request, context: Context) {
   } catch { return Response.json({ error: "版本参数无效。" }, { status: 400 }); }
   try { await requireProjectAccess(store, projectId); }
   catch { return Response.json({ error: "项目不存在或你无权访问。" }, { status: 404 }); }
+  if (process.env.VERCEL === "1") {
+    try {
+      const restored = await restoreCloudProject(supabase, projectId, targetVersion, expectedVersion);
+      return Response.json({projectId,currentVersion:restored.state.currentVersion,restoredFrom:targetVersion,artifactPath:restored.artifactPath,previewReady:restored.previewReady,previewUrl:"previewUrl" in restored ? restored.previewUrl : undefined,previewError:"previewError" in restored ? restored.previewError : undefined,expiresAt:restored.expiresAt},{headers:{"Cache-Control":"no-store"}});
+    } catch(error) {
+      const message=error instanceof Error ? error.message : "云端版本恢复失败";
+      const status=/版本已变化|version conflict|租约|其他任务/.test(message) ? 409 : /无权|不存在/.test(message) ? 404 : /只能恢复/.test(message) ? 400 : 500;
+      return Response.json({error:message},{status,headers:{"Cache-Control":"no-store"}});
+    }
+  }
   if (globalThis.__atomsGenerationActive) return Response.json({ error: "任务正在执行，请稍后恢复。" }, { status: 409 });
   globalThis.__atomsGenerationActive = true;
   try {

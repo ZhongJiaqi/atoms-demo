@@ -3,12 +3,14 @@ import { mkdir, mkdtemp, readFile, rename, rm, writeFile } from "node:fs/promise
 import { join } from "node:path";
 import { chromium } from "playwright";
 import { GENERATED_ROOT, hydrateProjectDirectoryAt } from "@/lib/agent/files";
-import { loadProjectVersion, requireAuthenticatedUser, requireProjectAccess, type ProjectStoreClient } from "@/lib/persistence/project-store";
+import { loadPersistedProject, loadProjectVersion, requireAuthenticatedUser, requireProjectAccess, type ProjectStoreClient } from "@/lib/persistence/project-store";
 import { createThumbnailQueue } from "@/lib/preview/thumbnail-queue";
 import { trimThumbnailCache } from "@/lib/preview/thumbnail-cache";
 import { restrictThumbnailBrowser } from "@/lib/preview/thumbnail-browser";
 import { buildProject, discardStagedPreview, startPreview } from "@/lib/sandbox/local-sandbox";
 import { createClient } from "@/lib/supabase/server";
+import { readArtifact } from "@/lib/cloud/artifacts";
+import { versionArtifactPath } from "@/lib/cloud/preview-access";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -19,13 +21,20 @@ const enqueue = createThumbnailQueue(6);
 
 export async function GET(request: Request, context: { params: Promise<{ projectId: string }> }) {
   const { projectId } = await context.params;
-  const store = await createClient() as unknown as ProjectStoreClient;
+  const client = await createClient();
+  const store = client as unknown as ProjectStoreClient;
   try {
-    await requireAuthenticatedUser(store);
+    const owner = await requireAuthenticatedUser(store);
     if (!/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(projectId)) return Response.json({ error: "无效项目 ID。" }, { status: 400 });
     const access = await requireProjectAccess(store, projectId);
     const version = Number(new URL(request.url).searchParams.get("version"));
     if (!Number.isSafeInteger(version) || version < 1 || version > access.currentVersion) return Response.json({ error: "无效项目版本。" }, { status: 400 });
+    if (process.env.VERCEL === "1") {
+      const bundle = await loadPersistedProject(store, projectId);
+      const artifact = await readArtifact(client, projectId, versionArtifactPath(bundle, owner.id, version));
+      if (!artifact.thumbnail) return Response.json({error:"云端封面暂不可用，仍可打开项目。"},{status:503,headers:{"Cache-Control":"no-store"}});
+      return new Response(new Uint8Array(Buffer.from(artifact.thumbnail,"base64")), {headers:{"Content-Type":"image/png","Cache-Control":"private, no-store","X-Project-Version":String(version),"X-Content-Type-Options":"nosniff"}});
+    }
     const cachePath = join(cacheRoot, `${projectId}-${version}.png`);
     let png: Buffer;
     try { png = await readFile(cachePath); }

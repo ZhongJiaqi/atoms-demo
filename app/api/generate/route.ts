@@ -1,5 +1,5 @@
-import { runGeneration } from "@/lib/agent/run-generation";
-import type { AgentEvent } from "@/lib/agent/types";
+import { runGeneration } from "../../../lib/agent/run-generation.ts";
+import type { AgentEvent } from "../../../lib/agent/types.ts";
 import {
   createProjectDraft,
   type ProjectStoreClient,
@@ -7,8 +7,10 @@ import {
   requireAuthenticatedUser,
   requireProjectAccess,
   saveProjectSnapshot,
-} from "@/lib/persistence/project-store";
-import { createClient } from "@/lib/supabase/server";
+} from "../../../lib/persistence/project-store.ts";
+import { createClient } from "../../../lib/supabase/server.ts";
+import { runCloudGeneration } from "../../../lib/agent/run-cloud-generation.ts";
+import { createCloudPreviewLink } from "../../../lib/cloud/preview-access.ts";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -54,10 +56,11 @@ export async function POST(request: Request) {
     const message = error instanceof Error ? error.message : "请先登录后再访问项目。";
     return Response.json({ error: message }, { status: projectId ? 403 : 401 });
   }
-  if (globalThis.__atomsGenerationActive) {
+  const cloud = process.env.VERCEL === "1";
+  if (!cloud && globalThis.__atomsGenerationActive) {
     return Response.json({ error: "演示版同一时间只运行一个生成任务，请稍后重试。" }, { status: 429 });
   }
-  globalThis.__atomsGenerationActive = true;
+  if (!cloud) globalThis.__atomsGenerationActive = true;
 
   const encoder = new TextEncoder();
   const browserOrigin = request.headers.get("origin");
@@ -75,7 +78,11 @@ export async function POST(request: Request) {
         if (!closed && !streamState.cancelled) controller.enqueue(encoder.encode(`: heartbeat ${Date.now()}\n\n`));
       }, 10_000);
 
-      void runGeneration(
+      let savedComplete: AgentEvent | undefined;
+      const task = cloud ? runCloudGeneration(requirement, origin, event => {
+        if (event.event === "complete") savedComplete = event;
+        else send(event);
+      }, supabase, projectId) : runGeneration(
         requirement,
         origin,
         send,
@@ -93,13 +100,24 @@ export async function POST(request: Request) {
           },
         },
         projectId,
-      )
+      );
+      void task
+        .then(async () => {
+          if (!savedComplete) return;
+          let preview: Record<string, unknown>;
+          try {
+            preview = await createCloudPreviewLink(supabase, savedComplete.data.projectId as string, savedComplete.data.version as number, savedComplete.data.artifactPath as string);
+          } catch (error) {
+            preview = { previewReady: false, previewError: error instanceof Error ? error.message : "云端预览配置不可用" };
+          }
+          send({ ...savedComplete, data: { ...savedComplete.data, ...preview } });
+        })
         .catch((error: unknown) => {
           const message = error instanceof Error ? error.message : "生成流程发生未知错误。";
           send({ event: "error", data: { message } });
         })
         .finally(() => {
-          globalThis.__atomsGenerationActive = false;
+          if (!cloud) globalThis.__atomsGenerationActive = false;
           clearInterval(heartbeat);
           closed = true;
           if (!streamState.cancelled) controller.close();

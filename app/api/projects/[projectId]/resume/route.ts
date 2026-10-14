@@ -9,10 +9,11 @@ import {
 import { previewUrl } from "@/lib/preview-url";
 import { buildProject, getPreview, startPreview } from "@/lib/sandbox/local-sandbox";
 import { createClient } from "@/lib/supabase/server";
+import { resumeCloudProject } from "@/lib/cloud/project-runtime";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
-export const maxDuration = 120;
+export const maxDuration = 300;
 
 declare global {
   // eslint-disable-next-line no-var
@@ -35,6 +36,17 @@ export async function POST(request: Request, context: RouteContext) {
   try {
     await requireAuthenticatedUser(store);
     await requireProjectAccess(store, projectId);
+    if (process.env.VERCEL === "1") {
+      const restored = await resumeCloudProject(supabase, projectId);
+      return Response.json({
+        projectId, projectName: restored.state.projectName, summary: restored.state.summary,
+        currentVersion: restored.state.currentVersion, messages: restored.state.messages,
+        turns: restored.state.turns, files: restored.project.files, artifactPath: restored.artifactPath,
+        previewReady: restored.previewReady, previewUrl: "previewUrl" in restored ? restored.previewUrl : undefined,
+        previewError: "previewError" in restored ? restored.previewError : undefined,
+        expiresAt: restored.expiresAt,
+      }, {headers:{"Cache-Control":"no-store"}});
+    }
     let job = resumeJobs.get(projectId);
     if (!job) {
       if (globalThis.__atomsGenerationActive) return Response.json({ error: "正在构建其他任务，请稍后重试预览。" }, { status: 409, headers: { "Cache-Control": "no-store" } });
@@ -75,7 +87,7 @@ export async function POST(request: Request, context: RouteContext) {
     );
   } catch (error) {
     const message = error instanceof Error ? error.message : "项目恢复失败。";
-    const status = message.includes("登录") ? 401 : message.includes("无权") || message.includes("不存在") ? 404 : 500;
+    const status = message.includes("登录") ? 401 : message.includes("无权") || message.includes("不存在") ? 404 : /租约|其他任务/.test(message) ? 409 : 500;
     return Response.json({ error: message }, { status });
   }
 }

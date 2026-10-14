@@ -233,7 +233,6 @@ button:disabled { cursor: not-allowed; }
 .history-version-content time { color: #758196; font-size: 11px; }
 .history-version-summary { margin: 10px 0 0; color: #5c687e; font-size: 12px; line-height: 1.7; overflow-wrap: anywhere; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; }
 .history-version-content footer { display: flex; gap: 8px; justify-content: space-between; align-items: center; min-height: 44px; margin-top: 10px; flex-wrap: wrap; }
-.history-version-content footer > span { padding: 2px 8px; border-radius: 7px; background: #e9e9ee; color: #74757a; font-size: 12px; }
 .history-version-content footer button { display: inline-flex; gap: 6px; align-items: center; justify-content: center; min-height: 44px; border: 1px solid #dde4f0; border-radius: 9px; padding: 0 12px; color: #425573; background: #fff; font-size: 12px; cursor: pointer; }
 .history-version-content footer button:hover:not(:disabled) { color: #315efb; border-color: #a9bdfb; background: #edf3ff; }
 .history-version-content footer button:disabled { opacity: .55; cursor: wait; }

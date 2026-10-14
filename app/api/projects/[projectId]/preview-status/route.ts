@@ -11,6 +11,7 @@ export async function GET(_request: Request, context: { params: Promise<{ projec
   try {
     await requireAuthenticatedUser(store);
     const access = await requireProjectAccess(store, projectId);
+    if (process.env.VERCEL === "1") return Response.json({active: access.currentVersion > 0, cloud: true, expiresAt: null, currentVersion: access.currentVersion}, {headers:{"Cache-Control":"no-store"}});
     const preview = getPreview(projectId);
     return Response.json({ active: Boolean(preview), expiresAt: preview?.expiresAt ?? null, currentVersion: access.currentVersion }, { headers: { "Cache-Control": "no-store" } });
   } catch (error) {

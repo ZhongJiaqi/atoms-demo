@@ -1,0 +1,13 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Atoms Demo · 云端接入进度</title>
+<style>body{margin:0;background:#f5f7fb;color:#20304b;font:15px/1.8 system-ui,-apple-system,"PingFang SC",sans-serif}main{max-width:920px;margin:40px auto;padding:0 20px}h1{font-size:30px;letter-spacing:-.04em}h2{font-size:18px}section{background:white;border:1px solid #e0e7f3;border-radius:16px;padding:22px;margin:16px 0}.status{color:#315efb;font-weight:600}.muted{color:#6d7b93}table{width:100%;border-collapse:collapse}td,th{text-align:left;vertical-align:top;border-bottom:1px solid #e8edf5;padding:12px}code{font-size:13px;background:#edf2fa;padding:2px 6px;border-radius:5px}a{color:#315efb}@media(max-width:600px){main{margin:20px auto}section{padding:16px}table{font-size:12px}td,th{padding:8px}}</style></head>
+<body><main><p class="status">2026-10-14 · 本地与云基础通过，尚未上线</p><h1>Atoms Demo 云端接入进度</h1>
+<section><h2>历史记录：重设计已验证</h2><p>移除大号版本占位图；版本号只在标题旁显示一次。项目名称、两行摘要、时间、当前状态与恢复操作形成清晰层级，支持桌面与320/375px窄屏、44px按钮、键盘关闭及原有回滚。</p><p class="muted">使用 frontend-design 保持原冷灰/蓝色风格，不重做工作区、不改变模型策略。当前本地体验：<a href="http://localhost:3010">localhost:3010</a>。</p></section>
+<section><h2>三条并行任务的结果</h2><table><tr><th>任务</th><th>已验证</th><th>仍未完成</th></tr>
+<tr><td>历史记录与宿主UI</td><td>新版样式；无预览URL时保留已保存项目，不崩溃；浏览器回归</td><td>线上与真实手机网络验收</td></tr>
+<tr><td>云Agent接入</td><td>真实模型/SDK/Storage/RPC创建v1及同项目修改v2；代码、四条消息、两次执行及产物读取</td><td>线上HTTP与iframe整链；云失败任务持久化；真实云封面</td></tr>
+<tr><td>数据库、安全与预览基础</td><td>私有Storage、RLS、项目租约、旧任务拒绝、PT409修复；签名/网关/域名隔离契约</td><td>Token实际权限、自动域名绑定及测试部署；统一快照和孤儿清理</td></tr></table></section>
+<section><h2>验证数字与边界</h2><p><strong>84项单元通过；生产构建通过；Playwright 29通过、5跳过、0失败。</strong>跳过的是缺少专用邮箱配置的完整认证/三代表性应用用例，不能算通过。</p><p>真实云Agent Node集成1/1（86.58秒）、真实云基础DB1/1（10.515秒）。iframe渲染、localStorage刷新和跨项目Origin隔离使用明确契约样本，不冒充线上AI验收。</p><p>初次DB测试确实失败：错误码40001触发反复重试。已新增forward迁移改为PT409，没有重写已部署迁移或删除真实项目。</p></section>
+<section><h2>部署前需要确认</h2><ol><li>允许首次Vercel Preview测试部署，验证实际Token权限、域名和iframe；不切生产域名、不购买域名或升级套餐。</li><li>允许定向修复PostCSS至8.5.30、sharp至0.35.5并更新锁文件，保留Next15.5.27，之后重跑构建与回归。</li></ol><p>另需服务端随机签名密钥 <code>ATOMS_PREVIEW_GRANT_SECRET</code> 和 <code>APP_PUBLIC_ORIGIN</code>。Token已Sensitive配置到Production/Preview，元数据确认仅限Atoms；密钥值及实际权限尚未通过运行时测试。</p></section>
+<section><h2>不能宣称已完成的部分</h2><p>运行时目前只核验已有预览域名，不自动绑定；新域名缺失会诚实显示预览不可用。GET→POST域名归属检查非原子，未实测项目限定Token前不得开放自动绑定。产物内嵌渲染适用当前受控单入口Vite项目，不保证动态分包、Worker或任意相对运行时资源兼容。</p><p class="muted">未正式部署、未升级付费、未修改本地环境文件、未访问或修改ai-news-radar数据。大陆访问仍须实测。</p></section>
+</main></body></html>

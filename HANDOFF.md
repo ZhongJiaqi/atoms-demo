@@ -2,6 +2,18 @@
 
 更新时间：2026-10-14（Asia/Shanghai）
 
+## 最新验证：云 HTTP 增量已接入，尚未部署
+
+- 历史UI已本地提交6d066af；随后增量兼容GenerationResult/恢复响应的可选previewUrl、previewReady、previewError，已保存但地址未就绪仍保留项目/源码/消息，错误面板可重试。浏览器先RED复现new URL(undefined)导致应用崩溃，再GREEN。
+- 真实Node云Agent链1/1通过（86.58秒）：真实模型创建v1→真实SDK构建→私有Storage→fencedRPC；读取同一项目DB基线再次真实模型修改为v2，两版本源码/四条聊天/两个completed run/两份产物的真实signedGET200均验证。测试清理随后经独立审查加异常隔离，清理失败分支单测通过；清理补丁后未重跑昂贵模型测试，不夸大验证。
+- APIgenerate/resume/restore/status/thumbnail/preview与middleware/hook已加入VERCEL=1云分支，本地分支保持。恢复旧local版本无artifactPath时按owner/project/对应completed run UUID确定不可变对象，missing才从project_versions重建，不推进版本。回滚在同项目租约下构建旧v文件、保存新v、保留消息。HTTP成功保存后才签链接；链接配置失败返回previewReady:false而非构建/保存失败。
+- gateway仅接受独立匹配项目域名及短期HMAC grant，grant绑定固定Supabase单对象signedURL；fetch无用户Cookie/JWT、redirect:error、10秒和5MiB流式限制。middleware阻断preview域名上的主站/auth/其他API，仅允许对应项目gateway；API为nodejs，Edge只纯host判断。CSP允许主站APP_PUBLIC_ORIGIN和可信当前VERCEL_URL，禁止网络连接。renderer将当前单entry Vite的JS/CSS内嵌dataURI；真实浏览器iframe计数、刷新localStorage与两项目origin隔离契约1/1通过，不冒充线上AI页面验收。
+- renderer兼容限制：未支持JS内部分包/import/Worker/运行时相对assetURL；现源码规则已禁止动态import，仍不得宣称通用Vite支持。CSS @import、srcset和外链资源明确拒绝；正则只针对受控固定index模板，不是通用HTML解析器。内嵌预算8MiB，Storage对象5MiB。
+- 稳定预览host为atoms-app-{完整UUID}.vercel.app。独立review指出alias GET→POST没有原子CAS；运行时ensurePreviewAlias仅GET核验，missing或旧部署即failclosed；bindPreviewAlias只导出控制面入口、暂无runtime调用，不假装自动配置成功。用户Token元数据核验projectId为本Atoms、30天有效，但Sensitiveenv的实际权限与绑定能力还需测试部署验证后才能开放自动绑定；这仍阻塞新用户首次自动预览，不可称线上可用。
+- 最终统一验证：npm run test:unit 84/84通过（包括云/API/grant/host/cleanup，外部传输契约不冒充真实云）；生产build通过；完整Playwright29通过/5跳过/0失败（1.1分钟），含真实本地模型/DB/沙盒回滚继续修改。独立UI/renderer/SQL/cloudHTTP复审无Critical/Important。当前本地服务会话43203，http://127.0.0.1:3010，绑定0.0.0.0。
+- 未执行部署、自动runtime域名绑定或付费升级。已通过异步问题请求两项确认：首次Vercel Preview测试部署；定向PostCSS8.5.30/sharp0.35.5依赖修复并更新锁文件（保留Next15.5.27）。答复前不改锁或发布。新增云配置仍需ATOMS_PREVIEW_GRANT_SECRET（随机>=32bytes，Sensitive）和APP_PUBLIC_ORIGIN；本地env未改。
+- 生产依赖只读npm audit --omit=dev：0critical/2high/1moderate，Next绑定postcss8.4.31/sharp0.34.5，registry最新8.5.30/0.35.5。不运行audit fix --force，不自动升Next16。云封面暂无真实PNG返回503并保留可打开项目fallback；云失败任务仍未持久化，统一快照/孤儿GC/完整邮件用例/大陆网络与线上浏览器验收仍待完成。
+
 ## 最新增量：历史记录重设计与云基础真实验收
 
 - 用户明确拒绝大号 v1 占位封面和重复版本号：现已移除左侧图标块，只在标题旁显示一次小型 vN 标签；项目名为标题、变更摘要两行截断、时间和恢复操作位于 footer。当前版本采用细蓝色边线/状态点，底部恢复说明独立于滚动列表。保持原恢复处理、禁用条件、44px触控、focus trap/Esc及减弱动效，不新增假截图或图片构建请求。

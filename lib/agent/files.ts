@@ -145,10 +145,12 @@ export async function prepareProjectDirectory(
   projectId: string,
   requirement: string,
   project: GeneratedProject,
+  root = GENERATED_ROOT,
 ) {
   validateProject(project);
-  await mkdir(GENERATED_ROOT, { recursive: true, mode: 0o700 });
-  const projectDir = join(GENERATED_ROOT, projectId);
+  if (!PROJECT_ID.test(projectId)) throw new Error("项目 ID 格式无效。");
+  await mkdir(root, { recursive: true, mode: 0o700 });
+  const projectDir = join(root, projectId);
   try {
     await access(projectDir, fsConstants.F_OK);
     throw new Error("项目目录已存在，拒绝覆盖。");
