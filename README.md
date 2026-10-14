@@ -1,5 +1,7 @@
 # Atoms Demo：核心 Coding Agent
 
+本项目使用 Codex 开发。
+
 当前版本已经跑通创建与多轮修改流程：用户第一次输入自然语言后，服务端调用真实 DashScope OpenAI-compatible 模型生成 React + Vite 源码；后续输入会携带同一个 `projectId`，读取原文件并让模型只返回必要的增量补丁。每一轮都在受控 macOS 沙盒中重新完成 TypeScript 检查和 Vite 构建，通过 SSE 返回执行状态，并用同一个项目 ID 更新真实 iframe 预览。构建失败时，Agent 会把真实日志交给模型自动修复，最多两轮；仍失败则恢复上一成功版本。
 
 ## 目录
