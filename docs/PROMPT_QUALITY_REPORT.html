@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="zh-CN">
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Atoms Demo · 生成质量优化</title>
+<style>
+:root{color-scheme:light;font:16px/1.7 system-ui,sans-serif;color:#202a3c;background:#f3f6fb}body{max-width:940px;margin:auto;padding:40px 22px}h1{font-size:30px;line-height:1.3}h2{font-size:21px}section{background:#fff;padding:24px;margin:20px 0;border:1px solid #dde4ee;border-radius:16px}p{margin:10px 0}.tag{display:inline-block;background:#e9efff;color:#3758ad;padding:4px 12px;border-radius:20px;font-size:14px}table{width:100%;border-collapse:collapse}th,td{text-align:left;padding:12px 8px;border-bottom:1px solid #e6ebf2;vertical-align:top}code{font-size:13px;overflow-wrap:anywhere}details{margin:14px 0}summary{cursor:pointer;font-weight:600}.scroll{overflow:auto}@media(max-width:600px){body{padding:22px 14px}section{padding:18px}h1{font-size:25px}}
+</style>
+<h1>简单需求，交付更完整的小型应用</h1>
+<p>Atoms Demo · Prompt 优化与本地真实模型验证 · 2026-10-14</p>
+<span class="tag">仅本地实现 · 尚未推送或部署</span>
+<section>
+<h2>最小改动</h2>
+<p>业务代码只修改 <code>lib/agent/model.ts</code> 的创建与增量修改提示词。根据用户提供的 <code>claude-prompt-template.md</code>，组织任务、上下文、质量要求、少量示例、JSON 输出和硬约束。</p>
+<p>不改变模型调用策略、8000 token 输出上限、超时、JSON 重试、沙盒权限、文件校验、认证与数据库。未修改环境文件和锁文件。</p>
+<div class="scroll"><table>
+<tr><th>质量方向</th><th>要求</th></tr>
+<tr><td>产品</td><td>补齐场景相关的编辑、搜索、筛选、实际统计；不添加无关登录、支付或假后端。</td></tr>
+<tr><td>视觉</td><td>统一设计变量、字号层次和舒适密度，响应式布局，轻量状态与动效；不强制所有应用使用同一模板。</td></tr>
+<tr><td>交互</td><td>可访问表单、校验和反馈、键盘操作；删除使用页面内确认或撤销，禁止 iframe 不支持的原生弹窗。</td></tr>
+<tr><td>真实数据</td><td>首次空记录、零统计；示例需用户主动加载并明确标注。localStorage 保留记录，不伪造用户数据。</td></tr>
+<tr><td>连续修改</td><td>保留原功能、样式和存储键，兼容旧数据，只返回必要修改文件。</td></tr>
+</table></div>
+</section>
+<section>
+<h2>同模型前后样本</h2>
+<p>模型均为 <code>deepseek-v4.1-flash</code>。输入只使用“做一个待办事项应用”和“做一个个人记账应用”；实际模型生成源码，经现有受控构建和跨 Origin iframe 运行，未手改生成代码。</p>
+<div class="scroll"><table>
+<tr><th>场景</th><th>旧 Prompt</th><th>新 Prompt 最终样本</th></tr>
+<tr><td>待办</td><td>约 14.8 秒可预览；无搜索，预置 3 条任务及 1 条已完成记录。</td><td>约 34.6 秒可预览；空数据起步，搜索、状态筛选、统计、编辑与页面内删除确认。</td></tr>
+<tr><td>记账</td><td>约 33.1 秒可预览；预置 6 条交易与非零收支。</td><td>约 54.5 秒可预览；空账户、真实计算金额、分类过滤、编辑、页面内删除确认。</td></tr>
+</table></div>
+<p>这两次生成更完整，但耗时增加。样本量很小且场景与提示词示例相同，不能证明普遍变快、稳定性或所有应用的视觉质量提升。</p>
+</section>
+<section>
+<h2>验证状态</h2>
+<p id="status">3 项关联 Playwright 测试均已通过：待办与记账在会话 34292 通过，主题定位修正后定向补验 77559 通过（1 passed，0 failed）。未将早期失败运行标为通过。</p>
+<p>用户授权全量回归后，128 项单元／边界测试及 3 项真实数据库、云 Agent、云构建集成全部通过；Next.js 完整生产构建与类型检查通过。两款生成样本首次加载均无 console error、HTTP 4xx/5xx，390px 无横向溢出；完整交互测试另行断言 console、网络及禁止外部请求。</p>
+<details><summary>验收覆盖</summary>
+<p>待办：新增两条、编辑、完成、确认删除，搜索命中／不命中／清空，iframe 真刷新后记录与完成状态保留，手机宽度新增。</p>
+<p>记账：空列表及零汇总，录入 88.50，编辑为 90.00，搜索过滤，真刷新后保留记录和金额，页面内确认删除后汇总归零。</p>
+<p>增量修改：对原项目真实调用模型增加深色模式，在同目录、同预览 Origin 重建；验收主题按钮、截图像素浅深变化、旧任务编辑／完成／搜索、刷新后数据及主题保留。</p>
+</details>
+<details><summary>失败记录与修复方式</summary>
+<p>旧 Prompt 未达到搜索与空账户断言（RED）。新版首次记账样本使用 window.confirm，iframe 禁止原生弹窗使删除无效，因此增加页面内确认要求；随后样本生成越过白名单的 src/storage.ts，因此明确工具文件只能放 src/data/*.ts。两次均修正 Prompt 后重新生成，未放宽权限或手改 AI 应用。</p>
+<p>测试自身两次定位误判：空状态提示使用 li，被计为真实任务；主题是三个独立按钮，却误点浅色。已依据实际 DOM 调整测试定位，不改应用以迎合断言。</p>
+</details>
+</section>
+<section>
+<h2>范围、残留风险与上线</h2>
+<p>本地全量单元／集成与完整构建已通过，线上新版 Prompt 回归尚未完成；未全面验证生成应用存储损坏／写入失败、无障碍、动效、所有屏幕与场景。提示词是质量引导，不是生成结果正确性的保证；现有校验和构建修复机制仍保留。</p>
+<p>用户已授权提交、推送、部署，再线上回归。当前线上模型已是 DeepSeek；新版 Prompt 的部署与验收结果以后续回归报告为准。若效果不佳，仅回退本次提示词改动，不回滚用户项目或数据库。</p>
+<p>自动化入口：<code>tests/utils/prompt-quality-eval.mjs</code> 生成真实样本；<code>tests/e2e/prompt-generated-apps.spec.ts</code> 验证对应样本。更换模型或重新生成后，应先核对实际界面控件与定位器。</p>
+</section>
+</html>
